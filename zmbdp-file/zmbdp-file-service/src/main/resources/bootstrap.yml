@@ -8,12 +8,12 @@ spring:
       discovery:
         username: nacos
         password: Hf@173503494
-        namespace: frameworkjava-${RUN_ENV}
+        namespace: zmbdphouse-${RUN_ENV}
         server-addr: ${NACOS_ADDR}
       config:
         username: nacos
         password: Hf@173503494
-        namespace: frameworkjava-${RUN_ENV}
+        namespace: zmbdphouse-${RUN_ENV}
         server-addr: ${NACOS_ADDR}
         file-extension: yaml
         shared-configs:

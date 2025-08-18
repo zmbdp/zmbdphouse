@@ -1,7 +1,7 @@
 # 命令中数据库相关信息、容器相关信息此前如有修改，请确保前后信息一致
 
 # 进入容器
-docker exec -it frameworkjava-mysql-slave bash
+docker exec -it zmbdphouse-mysql-slave bash
 
 #1.登录
 mysql -uroot -h127.0.0.1 -pHf@173503494

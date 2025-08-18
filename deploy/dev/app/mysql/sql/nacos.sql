@@ -5,7 +5,7 @@ set names utf8mb4;
 /*   表名称 = config_info                  */
 /******************************************/
 
-use `frameworkjava_nacos_dev`;
+use `zmbdphouse_nacos_dev`;
 create table `config_info`
 (
     `id`                 bigint(20)   not null auto_increment comment 'id',

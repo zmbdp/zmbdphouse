@@ -1,4 +1,4 @@
-use frameworkjava_dev;
+use zmbdphouse_dev;
 drop table if exists `app_user`;
 create table `app_user`
 (

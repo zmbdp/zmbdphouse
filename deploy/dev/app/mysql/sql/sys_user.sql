@@ -1,4 +1,4 @@
-use frameworkjava_dev;
+use zmbdphouse_dev;
 drop table if exists `sys_user`;
 create table `sys_user`
 (
