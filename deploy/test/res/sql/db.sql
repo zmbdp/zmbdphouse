@@ -4,7 +4,7 @@
 
 SET NAMES utf8mb4;
 
-use `frameworkjava_test`;
+use `zmbdphouse_test`;
 
 CREATE TABLE `sys_region`
 (
