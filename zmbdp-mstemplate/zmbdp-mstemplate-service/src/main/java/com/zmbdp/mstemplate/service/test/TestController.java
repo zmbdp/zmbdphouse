@@ -83,7 +83,7 @@ public class TestController {
         region2.setParentId(0L);
         sourceMap.put("region2", region2);
 
-        // 使用BeanCopyUtil.copyMapProperties进行拷贝
+        // 使用 BeanCopyUtil.copyMapProperties 进行拷贝
         Map<String, User> resultMap = BeanCopyUtil.copyMapProperties(sourceMap, User::new);
 
         return Result.success(resultMap);
