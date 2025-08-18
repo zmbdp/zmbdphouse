@@ -21,7 +21,9 @@
 
 ## 项目简介
 
-ZMBDPHOUSE是一个基于Spring Boot和Spring Cloud的在线租房平台，为用户提供房源浏览、在线预约、租房管理等功能。
+zmbdpHouse是一个基于Spring Boot和Spring Cloud的在线租房平台，为用户提供房源浏览、在线预约、租房管理等功能。
+
+本项目基于[zmbdp/frameworkjava](https://github.com/zmbdp/frameworkjava)企业级Spring Boot微服务脚手架开发，继承了其微服务架构和核心功能特性。
 
 ## 核心特性
 
