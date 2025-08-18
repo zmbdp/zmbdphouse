@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: zmbdp-file-service
+  profiles:
+    active: ${RUN_ENV}
+  cloud:
+    nacos:
+      discovery:
+        username: nacos
+        password: Hf@173503494
+        namespace: frameworkjava-${RUN_ENV}
+        server-addr: ${NACOS_ADDR}
+      config:
+        username: nacos
+        password: Hf@173503494
+        namespace: frameworkjava-${RUN_ENV}
+        server-addr: ${NACOS_ADDR}
+        file-extension: yaml
+        shared-configs:
+          - data-id: share-redis-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+            refresh: true # 配置是否支持动态刷新
+
+# 这⼀配置用于定义应用在控制台输出日志时所遵循的格式规则
+logging:
+  pattern:
+    console: '[%thread] %-5level %logger{36} - %msg%n'
