@@ -10,4 +10,4 @@ create table `sys_argument`
     unique index idx_config_key (`config_key`)
 ) engine=innodb auto_increment=10000001 character set=utf8mb4 comment='系统参数表';
 insert into `sys_argument`(`name`, `config_key`, `value`, `remark`) values
-( '热门城市', 'sys_hot_city', '1,2,9,22,94,121,217', '热门城市参数');
+( '热门城市', 'sys_hot_city', '35,108,234,236,289,342', '热门城市参数');
