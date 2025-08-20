@@ -1,6 +1,7 @@
 package com.zmbdp.admin.service.house.service.impl;
 
 import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
+import com.zmbdp.admin.service.house.mapper.HouseMapper;
 import com.zmbdp.admin.service.house.service.IHouseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +17,7 @@ import org.springframework.stereotype.Service;
 public class HouseServiceImpl implements IHouseService {
 
     @Autowired
-    private IHouseService houseService;
-
+    private HouseMapper houseMapper;
 
     /**
      * 添加或编辑房源
