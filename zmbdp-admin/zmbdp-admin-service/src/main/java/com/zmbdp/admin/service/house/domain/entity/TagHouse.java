@@ -1,5 +1,6 @@
 package com.zmbdp.admin.service.house.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.zmbdp.common.core.domain.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,16 +11,17 @@ import lombok.EqualsAndHashCode;
  * @author 稚名不带撇
  */
 @Data
+@TableName("tag_house")
 @EqualsAndHashCode(callSuper=true)
 public class TagHouse extends BaseDO {
-
-    /**
-     * 标签编码
-     */
-    private String tagCode;
 
     /**
      * 房源 id
      */
     private Long houseId;
+
+    /**
+     * 标签编码
+     */
+    private String tagCode;
 }

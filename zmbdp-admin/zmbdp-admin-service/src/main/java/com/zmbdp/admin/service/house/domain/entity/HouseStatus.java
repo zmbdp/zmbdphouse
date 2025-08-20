@@ -1,5 +1,6 @@
 package com.zmbdp.admin.service.house.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.zmbdp.common.core.domain.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,6 +11,7 @@ import lombok.EqualsAndHashCode;
  * @author 稚名不带撇
  */
 @Data
+@TableName("house_status")
 @EqualsAndHashCode(callSuper=true)
 public class HouseStatus extends BaseDO {
     /**
