@@ -455,6 +455,7 @@ public class HouseServiceImpl implements IHouseService {
             return null;
         }
 
+        // 查房东信息
         AppUser appUser = appUserMapper.selectById(house.getUserId());
         if (null == appUser) {
             log.error("查询的房源房东信息不存在，houseId:{}, userId:{}", houseId, house.getUserId());
@@ -469,10 +470,15 @@ public class HouseServiceImpl implements IHouseService {
             log.error("查询的房源状态信息不存在，houseId:{}", houseId);
             return null;
         }
-        // 把该房源的标签从数据库查出来
-        List<TagHouse> tagHouses = tagHouseMapper.selectList(
-                new LambdaQueryWrapper<TagHouse>().eq(TagHouse::getHouseId, houseId));
 
+        // 把该房源的标签从数据库查出来
+        List<TagHouse> tagHouses = tagHouseMapper.selectList(new LambdaQueryWrapper<TagHouse>()
+                .eq(TagHouse::getHouseId, houseId)
+        );
+        if (null == tagHouses) {
+            log.error("查询的房源标签信息不存在，houseId:{}", houseId);
+            return null;
+        }
         // 组装完整的房源信息 DTO
         return convertToHouseDTO(house, houseStatus, appUser, tagHouses);
     }
@@ -509,8 +515,10 @@ public class HouseServiceImpl implements IHouseService {
      * @param tagHouses 标签信息
      * @return 房源完整信息
      */
-    private HouseDTO convertToHouseDTO(House house, HouseStatus houseStatus,
-                                       AppUser appUser, List<TagHouse> tagHouses) {
+    private HouseDTO convertToHouseDTO(
+            House house, HouseStatus houseStatus,
+            AppUser appUser, List<TagHouse> tagHouses
+    ) {
         // 校验数据合法性
         if (null == house || null == houseStatus || null == appUser) {
             log.warn("房源信息不完整！");
@@ -533,8 +541,7 @@ public class HouseServiceImpl implements IHouseService {
         List<String> dataKeys = Arrays.stream(house.getDevices().split(","))
                 .distinct()
                 .collect(Collectors.toList());
-        List<DictionaryDataDTO> deviceDataDTOS
-                = sysDictionaryService.getDicDataByKeys(dataKeys);
+        List<DictionaryDataDTO> deviceDataDTOS = sysDictionaryService.getDicDataByKeys(dataKeys);
         List<DeviceDTO> deviceDTOS = deviceDataDTOS.stream()
                 .map(dataDTO -> {
                     DeviceDTO deviceDTO = new DeviceDTO();
@@ -553,8 +560,9 @@ public class HouseServiceImpl implements IHouseService {
                 .distinct()
                 .collect(Collectors.toList());
         if (!CollectionUtils.isEmpty(tagCodes)) {
-            List<Tag> tags = tagMapper.selectList(
-                    new LambdaQueryWrapper<Tag>().in(Tag::getTagCode, tagCodes));
+            List<Tag> tags = tagMapper.selectList(new LambdaQueryWrapper<Tag>()
+                    .in(Tag::getTagCode, tagCodes)
+            );
             houseDTO.setTags(BeanCopyUtil.copyListProperties(tags, TagDTO::new));
         }
         return houseDTO;
