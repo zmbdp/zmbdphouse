@@ -146,11 +146,16 @@ public class HouseServiceImpl implements IHouseService {
 
         // 编辑 需要判断是否更新 城市房源映射、标签房源映射
         if (houseAddOrEditReqDTO.getHouseId() != null) {
+            house.setId(houseAddOrEditReqDTO.getHouseId());
             // 判断是否需要修改城市房源映射
             House existHouse = houseMapper.selectById(houseAddOrEditReqDTO.getHouseId());
+            if (existHouse == null) {
+                log.warn("房源信息不存在; oldHouse: {}]", houseAddOrEditReqDTO.getHouseId());
+                throw new ServiceException("传递的房源id有误！", ResultCode.INVALID_PARA.getCode());
+            }
             // 只有不相同了才修改
             if (cityHouseNeedChange(existHouse, houseAddOrEditReqDTO.getCityId())) {
-                // 改变才更新(更新 MySQL，更新 Redis)
+                // 改变才更新 (更新 MySQL，更新 Redis)
                 editCityHouses(houseAddOrEditReqDTO.getHouseId(), existHouse.getCityId(),
                         houseAddOrEditReqDTO.getCityId(), houseAddOrEditReqDTO.getCityName());
             }
@@ -224,18 +229,15 @@ public class HouseServiceImpl implements IHouseService {
         // 校验设备码，房源基本配置信息（字典里面的内容）
         // 设备码：根据设备列表拿出查询出设备码
         // 获取用户传入的设备代码列表
-        List<String> devices = houseAddOrEditReqDTO.getDevices();
-        // 从数据库中查询这些设备代码是否有效
-        List<SysDictionaryData> devicesInDb = sysDictionaryDataMapper.selectList(
-                new LambdaQueryWrapper<SysDictionaryData>()
-                        .eq(SysDictionaryData::getTypeKey, "device_type")
-                        .in(SysDictionaryData::getDataKey, devices)
-        );
+//        List<String> devices = houseAddOrEditReqDTO.getDevices();
+//        // 从数据库中查询这些设备代码是否有效
+//        List<SysDictionaryData> devicesInDb = sysDictionaryDataMapper.selectList(
+//                new LambdaQueryWrapper<SysDictionaryData>()
+//                        .eq(SysDictionaryData::getTypeKey, "device_type")
+//                        .in(SysDictionaryData::getDataKey, devices)
+//        );
 
         // 验证设备代码是否都有效
-        if (devices.size() != devicesInDb.size()) {
-            throw new ServiceException("传递的设备列表有误！", ResultCode.INVALID_PARA.getCode());
-        }
 
         // 校验房源基本配置信息
 
@@ -249,7 +251,7 @@ public class HouseServiceImpl implements IHouseService {
      * @return true - 需要更新; false - 不需要更新
      */
     private boolean cityHouseNeedChange(House oldHouse, Long newCityId) {
-        return !oldHouse.getCityId().equals(newCityId);
+        return !Objects.equals(oldHouse.getCityId(), newCityId);
     }
 
     /**
@@ -355,7 +357,8 @@ public class HouseServiceImpl implements IHouseService {
         if (!CollectionUtils.isEmpty(deleteTagCodes)) {
             tagHouseMapper.delete(new LambdaQueryWrapper<TagHouse>()
                     .eq(TagHouse::getHouseId, houseId)
-                    .in(TagHouse::getTagCode, deleteTagCodes));
+                    .in(TagHouse::getTagCode, deleteTagCodes)
+            );
         }
 
         // 过滤出要新增的 tagCodes  6 7
