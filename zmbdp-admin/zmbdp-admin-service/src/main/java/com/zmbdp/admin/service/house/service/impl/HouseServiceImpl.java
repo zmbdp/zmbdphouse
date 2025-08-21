@@ -1,9 +1,14 @@
 package com.zmbdp.admin.service.house.service.impl;
 
+import com.zmbdp.admin.api.house.domain.dto.TagDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zmbdp.admin.api.config.domain.dto.DictionaryDataDTO;
+import com.zmbdp.admin.api.house.domain.dto.DeviceDTO;
 import com.zmbdp.admin.service.config.domain.entity.SysDictionaryData;
 import com.zmbdp.admin.service.config.mapper.SysDictionaryDataMapper;
+import com.zmbdp.admin.service.config.service.ISysDictionaryService;
 import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
+import com.zmbdp.admin.service.house.domain.dto.HouseDTO;
 import com.zmbdp.admin.service.house.domain.entity.*;
 import com.zmbdp.admin.service.house.domain.enums.HouseStatusEnum;
 import com.zmbdp.admin.service.house.mapper.*;
@@ -12,7 +17,6 @@ import com.zmbdp.admin.service.map.domain.entity.SysRegion;
 import com.zmbdp.admin.service.map.mapper.RegionMapper;
 import com.zmbdp.admin.service.user.domain.entity.AppUser;
 import com.zmbdp.admin.service.user.mapper.AppUserMapper;
-import com.zmbdp.common.bloomfilter.service.BloomFilterService;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.domain.domain.ResultCode;
@@ -21,6 +25,7 @@ import com.zmbdp.common.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
@@ -40,6 +45,15 @@ public class HouseServiceImpl implements IHouseService {
      * 城市房源映射锁前缀
      */
     private static final String CITY_HOUSE_PREFIX = "house:list:";
+    /**
+     * 城市完整信息 key 前缀
+     */
+    private static final String HOUSE_PREFIX = "house:";
+
+    /**
+     * 锁 key
+     */
+    private static final String LOCK_KEY = "scheduledTask:lock";
 
     /**
      * 房源表 mapper
@@ -96,12 +110,19 @@ public class HouseServiceImpl implements IHouseService {
     private RedisService redisService;
 
     /**
+     * 数据字典服务
+     */
+    @Autowired
+    private ISysDictionaryService sysDictionaryService;
+
+    /**
      * 添加或编辑房源
      *
      * @param houseAddOrEditReqDTO 房源信息
      * @return 房源 ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class) // 表示抛出异常就回滚，保证事务完整性
     public Long addOrEdit(HouseAddOrEditReqDTO houseAddOrEditReqDTO) {
         // 校验参数
         checkAddOrEditReq(houseAddOrEditReqDTO);
@@ -160,6 +181,9 @@ public class HouseServiceImpl implements IHouseService {
             // 设置房源标签 MySQL
             addTagHouses(house.getId(), houseAddOrEditReqDTO.getTagCodes());
         }
+
+        // 设置房源完整信息缓存
+        cacheHouse(house.getId());
         return house.getId();
     }
 
@@ -387,5 +411,152 @@ public class HouseServiceImpl implements IHouseService {
                     return tagHouse;
                 }).collect(Collectors.toList());
         tagHouseMapper.insert(tagHouses);
+    }
+
+    /**
+     * 根据房源 id 获取缓存中房源的完整信息
+     *
+     * @param houseId 房源 id
+     */
+    @Override
+    public void cacheHouse(Long houseId) {
+        // 判空
+        if (null == houseId) {
+            log.warn("要缓存的房源id为空！");
+            return;
+        }
+
+        // 通过 id 查询完整的信息
+        HouseDTO houseDTO = getHouseDTObyId(houseId);
+        if (null == houseDTO) {
+            log.warn("缓存房源信息时，查询房源错误！");
+            return;
+        }
+        // 缓存
+        cacheHouse(houseDTO);
+    }
+
+    /**
+     * 根据房源 id 获取完整的房源信息
+     *
+     * @param houseId 房源 id
+     * @return 房源 DTO
+     */
+    private HouseDTO getHouseDTObyId(Long houseId) {
+        if (null == houseId) {
+            log.warn("要查询的房源id为空");
+            return null;
+        }
+
+        // 查房源、状态、tagHouse关联关系、房东信息
+        House house = houseMapper.selectById(houseId);
+        if (null == house) {
+            log.error("查询房源失败，houseId:{}", houseId);
+            return null;
+        }
+
+        AppUser appUser = appUserMapper.selectById(house.getUserId());
+        if (null == appUser) {
+            log.error("查询的房源房东信息不存在，houseId:{}, userId:{}", houseId, house.getUserId());
+            return null;
+        }
+
+        // 把该房源状态从数据库查出来
+        HouseStatus houseStatus = houseStatusMapper.selectOne(
+                new LambdaQueryWrapper<HouseStatus>()
+                        .eq(HouseStatus::getHouseId, houseId));
+        if (null == houseStatus) {
+            log.error("查询的房源状态信息不存在，houseId:{}", houseId);
+            return null;
+        }
+        // 把该房源的标签从数据库查出来
+        List<TagHouse> tagHouses = tagHouseMapper.selectList(
+                new LambdaQueryWrapper<TagHouse>().eq(TagHouse::getHouseId, houseId));
+
+        // 组装完整的房源信息 DTO
+        return convertToHouseDTO(house, houseStatus, appUser, tagHouses);
+    }
+
+    /**
+     * 缓存房源完整数据 houseDTO
+     *
+     * @param houseDTO 房源完整数据 houseDTO
+     */
+    private void cacheHouse(HouseDTO houseDTO) {
+        if (null == houseDTO) {
+            log.warn("要缓存的房源详细信息为空！");
+            return;
+        }
+
+        // 缓存
+        try {
+            redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(),
+                    JsonUtil.classToJson(houseDTO));
+        } catch (Exception e) {
+            log.error("缓存房源完整信息时发生异常，houseDTO:{}", JsonUtil.classToJson(houseDTO), e);
+            // 对于房源完整信息，是否存在于redis，不需要强一致性。
+            // 因为C端查询时，如果redis不存在，可以通过查MySQL获取到数据，让后再放入Redis。
+            // throw e;
+        }
+    }
+
+    /**
+     * 组装房源完整信息
+     *
+     * @param house 房源信息
+     * @param houseStatus 房源状态
+     * @param appUser 房东信息
+     * @param tagHouses 标签信息
+     * @return 房源完整信息
+     */
+    private HouseDTO convertToHouseDTO(House house, HouseStatus houseStatus,
+                                       AppUser appUser, List<TagHouse> tagHouses) {
+        // 校验数据合法性
+        if (null == house || null == houseStatus || null == appUser) {
+            log.warn("房源信息不完整！");
+            return null;
+        }
+
+        HouseDTO houseDTO = new HouseDTO();
+        BeanCopyUtil.copyProperties(house, houseDTO);
+        BeanCopyUtil.copyProperties(houseStatus, houseDTO);
+        BeanCopyUtil.copyProperties(appUser, houseDTO);
+
+        houseDTO.setArea(house.getArea().doubleValue());
+        houseDTO.setPrice(house.getPrice().doubleValue());
+        houseDTO.setLongitude(house.getLongitude().doubleValue());
+        houseDTO.setLatitude(house.getLatitude().doubleValue());
+        houseDTO.setImages(JsonUtil.jsonToList(house.getImages(), String.class));
+
+        // 表： soft,washer,broadband
+        // DeviceDTO:  String deviceCode，String deviceName;
+        List<String> dataKeys = Arrays.stream(house.getDevices().split(","))
+                .distinct()
+                .collect(Collectors.toList());
+        List<DictionaryDataDTO> deviceDataDTOS
+                = sysDictionaryService.getDicDataByKeys(dataKeys);
+        List<DeviceDTO> deviceDTOS = deviceDataDTOS.stream()
+                .map(dataDTO -> {
+                    DeviceDTO deviceDTO = new DeviceDTO();
+                    deviceDTO.setDeviceCode(dataDTO.getDataKey());
+                    deviceDTO.setDeviceName(dataDTO.getValue());
+                    return deviceDTO;
+                }).collect(Collectors.toList());
+        houseDTO.setDevices(deviceDTOS);
+
+        // TagDTO:String tagCode; String tagName;
+        // 表 Tag
+
+        // 获取到 tagCodes，接着查询 Tag
+        List<String> tagCodes = tagHouses.stream()
+                .map(TagHouse::getTagCode)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(tagCodes)) {
+            List<Tag> tags = tagMapper.selectList(
+                    new LambdaQueryWrapper<Tag>().in(Tag::getTagCode, tagCodes));
+            houseDTO.setTags(BeanCopyUtil.copyListProperties(tags, TagDTO::new));
+        }
+        return houseDTO;
     }
 }

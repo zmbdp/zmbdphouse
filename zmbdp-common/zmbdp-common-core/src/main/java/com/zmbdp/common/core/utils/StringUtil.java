@@ -11,7 +11,7 @@ import java.util.List;
  *
  * @author 稚名不带撇
  */
-public class StringUtil {
+public class StringUtil extends StringUtils{
 
     /**
      * 判断指定字符串是否与指定匹配规则链表中的任意一个匹配规则匹配

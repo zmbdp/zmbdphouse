@@ -16,4 +16,11 @@ public interface IHouseService {
      * @return 房源 ID
      */
     Long addOrEdit(HouseAddOrEditReqDTO houseAddOrEditReqDTO);
+
+    /**
+     * 根据房源 id 获取缓存中房源的完整信息
+     *
+     * @param houseId 房源 ID
+     */
+    void cacheHouse(Long houseId);
 }
