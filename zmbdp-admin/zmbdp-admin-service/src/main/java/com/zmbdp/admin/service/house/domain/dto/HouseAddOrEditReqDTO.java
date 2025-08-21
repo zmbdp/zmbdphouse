@@ -157,5 +157,4 @@ public class HouseAddOrEditReqDTO implements Serializable {
      */
     @NotNull(message = "房源纬度不能为空！")
     private Double latitude;
-
 }
