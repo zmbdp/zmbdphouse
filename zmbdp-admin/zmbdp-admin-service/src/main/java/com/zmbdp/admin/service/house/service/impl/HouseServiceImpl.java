@@ -326,8 +326,6 @@ public class HouseServiceImpl implements IHouseService {
         // 然后再把新的标签码排序
         newTagCodes = newTagCodes.stream().sorted().collect(Collectors.toList());
 
-        // 2 1 3
-        // 1 3 2
         // 不相等的时候才需要更新
         return !Objects.equals(oldTagCods, newTagCodes);
     }
@@ -339,9 +337,7 @@ public class HouseServiceImpl implements IHouseService {
      * @param oldTagHouses 旧标签映射关系
      * @param newTagCodes  新标签码
      */
-    private void editTagHouses(Long houseId,
-                               List<TagHouse> oldTagHouses,
-                               List<String> newTagCodes) {
+    private void editTagHouses(Long houseId, List<TagHouse> oldTagHouses, List<String> newTagCodes) {
         // houseId: 1
         // old：1 2 3 4 5
         // new: 3 4 5 6 7
