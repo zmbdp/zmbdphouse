@@ -18,7 +18,7 @@ public interface IHouseService {
     Long addOrEdit(HouseAddOrEditReqDTO houseAddOrEditReqDTO);
 
     /**
-     * 根据房源 id 获取缓存中房源的完整信息
+     * 更新房源缓存
      *
      * @param houseId 房源 ID
      */

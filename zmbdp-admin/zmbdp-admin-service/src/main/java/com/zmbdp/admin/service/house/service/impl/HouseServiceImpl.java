@@ -414,7 +414,7 @@ public class HouseServiceImpl implements IHouseService {
     }
 
     /**
-     * 根据房源 id 获取缓存中房源的完整信息
+     * 更新房源缓存
      *
      * @param houseId 房源 id
      */
@@ -500,9 +500,6 @@ public class HouseServiceImpl implements IHouseService {
                     JsonUtil.classToJson(houseDTO));
         } catch (Exception e) {
             log.error("缓存房源完整信息时发生异常，houseDTO:{}", JsonUtil.classToJson(houseDTO), e);
-            // 对于房源完整信息，是否存在于redis，不需要强一致性。
-            // 因为C端查询时，如果redis不存在，可以通过查MySQL获取到数据，让后再放入Redis。
-            // throw e;
         }
     }
 
