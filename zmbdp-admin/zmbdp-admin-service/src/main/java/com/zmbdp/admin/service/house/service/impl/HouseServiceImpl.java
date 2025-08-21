@@ -83,6 +83,9 @@ public class HouseServiceImpl implements IHouseService {
     @Autowired
     private TagHouseMapper tagHouseMapper;
 
+    /**
+     * 数据字典表 mapper
+     */
     @Autowired
     private SysDictionaryDataMapper sysDictionaryDataMapper;
 
@@ -91,13 +94,6 @@ public class HouseServiceImpl implements IHouseService {
      */
     @Autowired
     private RedisService redisService;
-
-    /**
-     * 布隆过滤器服务
-     */
-    @Autowired
-    private BloomFilterService bloomFilterService;
-
 
     /**
      * 添加或编辑房源
@@ -164,8 +160,6 @@ public class HouseServiceImpl implements IHouseService {
             // 设置房源标签 MySQL
             addTagHouses(house.getId(), houseAddOrEditReqDTO.getTagCodes());
         }
-
-        bloomFilterService.put(String.valueOf(house.getId()));
         return house.getId();
     }
 
@@ -177,7 +171,7 @@ public class HouseServiceImpl implements IHouseService {
     private void checkAddOrEditReq(HouseAddOrEditReqDTO houseAddOrEditReqDTO) {
         // 校验房东信息
         // 查询房东是否存在
-        if (houseAddOrEditReqDTO.getUserId() == null || !bloomFilterService.mightContain(String.valueOf(houseAddOrEditReqDTO.getUserId()))) {
+        if (houseAddOrEditReqDTO.getUserId() == null) {
             throw new ServiceException("房东 id 不存在！", ResultCode.INVALID_PARA.getCode());
         }
         AppUser appUser = appUserMapper.selectById(houseAddOrEditReqDTO.getUserId());
@@ -262,17 +256,14 @@ public class HouseServiceImpl implements IHouseService {
     }
 
     /**
-     * 缓存城市房源映射关系
+     * 缓存城市房源映射关系（redis）
      *
      * @param op        操作类型：1 - 新增；2 - 修改；
      * @param houseId   房源 id
      * @param oldCityId 旧城市 id
      * @param newCityId 新城市 id
      */
-    private void cacheCityHouses(
-            int op, Long houseId,
-            Long oldCityId, Long newCityId
-    ) {
+    private void cacheCityHouses(int op, Long houseId, Long oldCityId, Long newCityId) {
         try {
             if (1 == op) {
                 // 新增场景：新增城市下的房源 id
@@ -286,11 +277,10 @@ public class HouseServiceImpl implements IHouseService {
             } else {
                 log.error("无效的操作：缓存城市房源关联信息");
             }
-
         } catch (Exception e) {
             log.error("缓存城市下的房源列表发生异常，op:{}, houseId:{}, oldCityId:{}, newCityId:{}", op, houseId, oldCityId, newCityId, e);
-            // 注意这里抛出了异常，保证事务
-            // 因为C端获取房源列表是以城市 ID 列表为主的，因此我们必须保证 redis 和 mysql 的数据的一致性！！！
+            // 抛出异常，保证事务
+            // 因为 C端获取房源列表是以城市 ID 列表为主的，必须保证 redis 和 mysql 的数据的一致性
             throw e;
         }
     }
