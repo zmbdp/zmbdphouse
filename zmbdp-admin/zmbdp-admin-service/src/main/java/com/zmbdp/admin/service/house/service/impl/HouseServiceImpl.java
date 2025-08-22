@@ -495,21 +495,23 @@ public class HouseServiceImpl implements IHouseService {
      */
     private HouseDTO getHouseDTObyId(Long houseId) {
         if (null == houseId) {
-            log.warn("要查询的房源id为空");
+            log.warn("要查询的房源 id 为空");
             return null;
         }
+
+        // TODO: 可以加个锁，保证每次查询的就只有一个就行了
 
         // 查房源、状态、tagHouse关联关系、房东信息
         House house = houseMapper.selectById(houseId);
         if (null == house) {
-            log.error("查询房源失败，houseId:{}", houseId);
+            log.error("查询房源失败，houseId: {}", houseId);
             return null;
         }
 
         // 查房东信息
         AppUser appUser = appUserMapper.selectById(house.getUserId());
         if (null == appUser) {
-            log.error("查询的房源房东信息不存在，houseId:{}, userId:{}", houseId, house.getUserId());
+            log.error("查询的房源房东信息不存在，houseId: {}, userId: {}", houseId, house.getUserId());
             return null;
         }
 
@@ -518,7 +520,7 @@ public class HouseServiceImpl implements IHouseService {
                 .eq(HouseStatus::getHouseId, houseId)
         );
         if (null == houseStatus) {
-            log.error("查询的房源状态信息不存在，houseId:{}", houseId);
+            log.error("查询的房源状态信息不存在，houseId: {}", houseId);
             return null;
         }
 
@@ -527,7 +529,7 @@ public class HouseServiceImpl implements IHouseService {
                 .eq(TagHouse::getHouseId, houseId)
         );
         if (null == tagHouses) {
-            log.error("查询的房源标签信息不存在，houseId:{}", houseId);
+            log.error("查询的房源标签信息不存在，houseId: {}", houseId);
             return null;
         }
         // 组装完整的房源信息 DTO
@@ -551,7 +553,7 @@ public class HouseServiceImpl implements IHouseService {
             // 布隆过滤器
             bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
         } catch (Exception e) {
-            log.error("缓存房源完整信息时发生异常，houseDTO:{}", JsonUtil.classToJson(houseDTO), e);
+            log.error("缓存房源完整信息时发生异常，houseDTO: {}", JsonUtil.classToJson(houseDTO), e);
         }
     }
 
@@ -630,7 +632,7 @@ public class HouseServiceImpl implements IHouseService {
         try {
             return redisService.getCacheObject(HOUSE_PREFIX + houseId, HouseDTO.class);
         } catch (Exception e) {
-            log.error("从缓存中获取房源详情异常，key:{}", HOUSE_PREFIX + houseId, e);
+            log.error("从缓存中获取房源详情异常，key: {}", HOUSE_PREFIX + houseId, e);
         }
         return null;
     }
@@ -653,7 +655,7 @@ public class HouseServiceImpl implements IHouseService {
             redisService.setCacheObject(HOUSE_PREFIX + houseId, new HouseDTO(), timeout, TimeUnit.SECONDS);
             bloomFilterService.put(HOUSE_PREFIX + houseId);
         } catch (Exception e) {
-            log.error("缓存空房源完整信息时发生异常，houseId:{}", houseId, e);
+            log.error("缓存空房源完整信息时发生异常，houseId: {}", houseId, e);
             // 对于房源完整信息，是否存在于 redis，不需要强一致性。
             // 因为 C端查询时，如果 redis 不存在，可以通过查 MySQL 获取到数据，让后再放入 Redis。
         }
