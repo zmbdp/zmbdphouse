@@ -35,5 +35,5 @@ public interface HouseServiceApi {
      * @return 房源详情
      */
     @GetMapping("/detail")
-    Result<HouseDetailVO> detail(@RequestParam Long houseId);
+    Result<HouseDetailVO> detail(@RequestParam("houseId") Long houseId);
 }

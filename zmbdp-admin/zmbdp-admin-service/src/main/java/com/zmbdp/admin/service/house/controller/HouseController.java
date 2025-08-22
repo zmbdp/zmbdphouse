@@ -6,6 +6,7 @@ import com.zmbdp.admin.api.house.feign.HouseServiceApi;
 import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
 import com.zmbdp.admin.service.house.domain.dto.HouseDTO;
 import com.zmbdp.admin.service.house.domain.dto.HouseDescDTO;
+import com.zmbdp.admin.service.house.domain.dto.HouseListReqDTO;
 import com.zmbdp.admin.service.house.domain.vo.HouseVO;
 import com.zmbdp.admin.service.house.service.IHouseService;
 import com.zmbdp.common.core.domain.dto.BasePageDTO;
@@ -60,12 +61,12 @@ public class HouseController implements HouseServiceApi {
         return Result.success(houseDTO.convertToVO());
     }
 
-//    /**
-//     * 查询房源摘要列表（支持翻页、支持筛选）
-//     *
-//     * @param houseListReqDTO 查询参数
-//     * @return 房源摘要列表
-//     */
+    /**
+     * 查询房源摘要列表（支持翻页、支持筛选）
+     *
+     * @param houseListReqDTO 查询参数
+     * @return 房源摘要列表
+     */
 //    @PostMapping("/list")
 //    public Result<BasePageVO<HouseVO>> list(@Validated @RequestBody HouseListReqDTO houseListReqDTO) {
 //        BasePageDTO<HouseDescDTO> houseDescList = houseService.list(houseListReqDTO);
@@ -73,8 +74,7 @@ public class HouseController implements HouseServiceApi {
 //        BeanCopyUtil.copyProperties(houseDescList, result);
 //        return Result.success(result);
 //    }
-//
-//
+
 //    /**
 //     * 更新房源状态
 //     *
@@ -104,7 +104,7 @@ public class HouseController implements HouseServiceApi {
      * @return 房源列表
      */
     @Override
-    public Result<BasePageVO<HouseDetailVO>> searchList(@Validated @RequestBody SearchHouseListReqDTO searchHouseListReqDTO) {
+    public Result<BasePageVO<HouseDetailVO>> searchList(@Validated SearchHouseListReqDTO searchHouseListReqDTO) {
 //        BasePageVO<HouseDetailVO> result = new BasePageVO<>();
 //        BasePageDTO<HouseDTO> searchDTO =  houseService.searchList(searchHouseListReqDTO);
 //        result.setTotals(searchDTO.getTotals());
