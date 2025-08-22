@@ -45,10 +45,10 @@ public class RedisConfig {
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
-        //Redis 中 key的序列化设置
+        // Redis 中 key的序列化设置
         redisTemplate.setKeySerializer(new StringRedisSerializer()); // 配置正常 key 的序列化方式
         redisTemplate.setHashKeySerializer(new StringRedisSerializer()); // 配置 hashKey 的序列化方式
-        //Redis 中 value的序列化设置
+        // Redis 中 value的序列化设置
         GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = createJacksonSerializer();
         redisTemplate.setValueSerializer(jackson2JsonRedisSerializer); // 配置 value 的序列化方式
         redisTemplate.setHashValueSerializer(jackson2JsonRedisSerializer); // 配置 hash 的 value 的序列化方式

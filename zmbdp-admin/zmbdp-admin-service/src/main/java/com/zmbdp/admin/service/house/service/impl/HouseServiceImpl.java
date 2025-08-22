@@ -30,6 +30,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -199,7 +200,7 @@ public class HouseServiceImpl implements IHouseService {
             addTagHouses(house.getId(), houseAddOrEditReqDTO.getTagCodes());
         }
 
-        // 设置房源完整信息缓存 (添加到布隆过滤器)
+        // 设置房源完整信息缓存 (房源 id 添加到布隆过滤器)
         cacheHouse(house.getId());
         return house.getId();
     }
@@ -455,7 +456,35 @@ public class HouseServiceImpl implements IHouseService {
      */
     @Override
     public HouseDTO detail(Long houseId) {
-        return null;
+        // 判空
+        if (null == houseId || houseId < 0) {
+            log.warn("要查询的房源id为空或无效！");
+            return null;
+        }
+        // 先查缓存 + 布隆过滤器
+        HouseDTO houseDTO = getCacheHouse(houseId);
+
+        // 缓存存在直接返回
+        if (null != houseDTO) {
+            return houseDTO;
+        }
+
+        // 缓存不存在，查询 Mysql
+        houseDTO = getHouseDTObyId(houseId);
+
+        // mysql 不存在，缓存空对象（解决缓存穿透）
+        if (null == houseDTO) {
+            // 设置缓存空对象，设置到 redis 和 布隆过滤器 里面，解决缓存穿透问题
+            cacheNullHouse(houseId, 60L);
+            log.error("查询房源信息错误，houseId:{}", houseId);
+            return null;
+        }
+
+        // mysql 存在，缓存房源详情
+        cacheHouse(houseDTO);
+
+        // 返回
+        return houseDTO;
     }
 
     /**
@@ -485,9 +514,9 @@ public class HouseServiceImpl implements IHouseService {
         }
 
         // 把该房源状态从数据库查出来
-        HouseStatus houseStatus = houseStatusMapper.selectOne(
-                new LambdaQueryWrapper<HouseStatus>()
-                        .eq(HouseStatus::getHouseId, houseId));
+        HouseStatus houseStatus = houseStatusMapper.selectOne(new LambdaQueryWrapper<HouseStatus>()
+                .eq(HouseStatus::getHouseId, houseId)
+        );
         if (null == houseStatus) {
             log.error("查询的房源状态信息不存在，houseId:{}", houseId);
             return null;
@@ -518,7 +547,7 @@ public class HouseServiceImpl implements IHouseService {
 
         // 缓存
         try {
-            redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(), JsonUtil.classToJson(houseDTO));
+            redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(), houseDTO);
             // 布隆过滤器
             bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
         } catch (Exception e) {
@@ -586,5 +615,48 @@ public class HouseServiceImpl implements IHouseService {
             houseDTO.setTags(BeanCopyUtil.copyListProperties(tags, TagDTO::new));
         }
         return houseDTO;
+    }
+
+    /**
+     * 从缓存查询房源详情
+     *
+     * @param houseId 房源 id
+     * @return 房源详情
+     */
+    private HouseDTO getCacheHouse(Long houseId) {
+        if (null == houseId || !bloomFilterService.mightContain(HOUSE_PREFIX + houseId)) {
+            return null;
+        }
+        try {
+            return redisService.getCacheObject(HOUSE_PREFIX + houseId, HouseDTO.class);
+            // redisService.setCacheObject(HOUSE_PREFIX + houseId, JsonUtil.classToJson(new HouseDTO()), timeout, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("从缓存中获取房源详情异常，key:{}", HOUSE_PREFIX + houseId, e);
+        }
+        return null;
+    }
+
+    /**
+     * 缓存房源空对象 (带过期时间)
+     *
+     * @param houseId 房源 id
+     * @param timeout 过期时间（秒）
+     */
+    private void cacheNullHouse(Long houseId, Long timeout) {
+
+        if (null == houseId) {
+            log.warn("要缓存的房源id为空！");
+            return;
+        }
+
+        // 缓存
+        try {
+            redisService.setCacheObject(HOUSE_PREFIX + houseId, new HouseDTO(), timeout, TimeUnit.SECONDS);
+            bloomFilterService.put(HOUSE_PREFIX + houseId);
+        } catch (Exception e) {
+            log.error("缓存空房源完整信息时发生异常，houseId:{}", houseId, e);
+            // 对于房源完整信息，是否存在于 redis，不需要强一致性。
+            // 因为 C端查询时，如果 redis 不存在，可以通过查 MySQL 获取到数据，让后再放入 Redis。
+        }
     }
 }
