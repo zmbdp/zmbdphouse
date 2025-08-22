@@ -76,17 +76,29 @@ public class MapServiceImpl implements IMapService {
      */
     @PostConstruct
     public void initCityMap() {
-        // 缓存预热
+        // 缓存预热，加锁！！！
         // 直接设置到二级缓存和一级缓存中
-        // 1 直接先查数据库
-        List<SysRegion> cityList = regionMapper.selectAllRegion();
-        // 2 在服务启动期间，缓存城市列表
-        loadCityInfo(cityList);
-        // 3 在服务启动期间，缓存城市归类列表
-        loadCityPinyinInfo(cityList);
-        // 4 在服务启动期间，缓存城市热点列表
-        loadCityHotListInfo(cityList);
-        log.info("缓存预热完成，一共有 {} 个城市", cityList.size());
+        log.info("开始城市缓存预热");
+        RLock lock = redissonLockService.acquire(MapConstants.CITY_LOCK_KEY, 3, TimeUnit.SECONDS);
+        if (null == lock) {
+            log.info("城市缓存预热已获取锁失败，跳过执行");
+            return;
+        }
+        try {
+            // 1 直接先查数据库
+            List<SysRegion> cityList = regionMapper.selectAllRegion();
+            // 2 在服务启动期间，缓存城市列表
+            loadCityInfo(cityList);
+            // 3 在服务启动期间，缓存城市归类列表
+            loadCityPinyinInfo(cityList);
+            // 4 在服务启动期间，缓存城市热点列表
+            loadCityHotListInfo(cityList);
+            log.info("缓存预热完成，一共有 {} 个城市", cityList.size());
+        } catch (Exception e) {
+            log.error("城市缓存预热失败：{}", e.getMessage(), e);
+        } finally {
+            redissonLockService.releaseLock(lock);
+        }
     }
 
     /**

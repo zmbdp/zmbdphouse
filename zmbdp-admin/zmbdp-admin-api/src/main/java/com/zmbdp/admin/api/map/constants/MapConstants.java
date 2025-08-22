@@ -46,4 +46,9 @@ public class MapConstants {
      * 热门城市键
      */
     public final static String CONFIG_KEY = "sys_hot_city";
+
+    /**
+     * 地图锁 key
+     */
+    public static final String CITY_LOCK_KEY = "city:lock";
 }

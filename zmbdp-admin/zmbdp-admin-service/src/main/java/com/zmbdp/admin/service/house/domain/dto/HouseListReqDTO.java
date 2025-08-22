@@ -12,7 +12,7 @@ import lombok.Data;
 public class HouseListReqDTO extends BasePageReqDTO {
 
     /**
-     * 房源ID
+     * 房源 id
      */
     private Long houseId;
 
@@ -40,5 +40,4 @@ public class HouseListReqDTO extends BasePageReqDTO {
      * 所在小区
      */
     private String communityName;
-
 }

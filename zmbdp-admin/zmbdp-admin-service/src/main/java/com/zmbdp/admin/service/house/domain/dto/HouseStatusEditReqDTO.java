@@ -17,7 +17,7 @@ public class HouseStatusEditReqDTO implements Serializable {
     /**
      * 房源 id
      */
-    @NotNull(message = "房源Id不能为空！")
+    @NotNull(message = "房源id不能为空！")
     private Long houseId;
 
     /**

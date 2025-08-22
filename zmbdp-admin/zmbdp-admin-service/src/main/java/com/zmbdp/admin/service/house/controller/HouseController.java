@@ -3,10 +3,7 @@ package com.zmbdp.admin.service.house.controller;
 import com.zmbdp.admin.api.house.domain.dto.SearchHouseListReqDTO;
 import com.zmbdp.admin.api.house.domain.vo.HouseDetailVO;
 import com.zmbdp.admin.api.house.feign.HouseServiceApi;
-import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
-import com.zmbdp.admin.service.house.domain.dto.HouseDTO;
-import com.zmbdp.admin.service.house.domain.dto.HouseDescDTO;
-import com.zmbdp.admin.service.house.domain.dto.HouseListReqDTO;
+import com.zmbdp.admin.service.house.domain.dto.*;
 import com.zmbdp.admin.service.house.domain.vo.HouseVO;
 import com.zmbdp.admin.service.house.service.IHouseService;
 import com.zmbdp.common.core.domain.dto.BasePageDTO;
@@ -55,7 +52,7 @@ public class HouseController implements HouseServiceApi {
     public Result<HouseDetailVO> detail(Long houseId) {
         HouseDTO houseDTO = houseService.detail(houseId);
         if (null == houseDTO) {
-            log.warn("要查询的房源不存在，houseId:{}", houseId);
+            log.warn("要查询的房源不存在，houseId: {}", houseId);
             return Result.fail("房源详情不存在！");
         }
         return Result.success(houseDTO.convertToVO());
@@ -67,27 +64,27 @@ public class HouseController implements HouseServiceApi {
      * @param houseListReqDTO 查询参数
      * @return 房源摘要列表
      */
-//    @PostMapping("/list")
-//    public Result<BasePageVO<HouseVO>> list(@Validated @RequestBody HouseListReqDTO houseListReqDTO) {
-//        BasePageDTO<HouseDescDTO> houseDescList = houseService.list(houseListReqDTO);
-//        BasePageVO<HouseVO> result = new BasePageVO<>();
-//        BeanCopyUtil.copyProperties(houseDescList, result);
-//        return Result.success(result);
-//    }
+    @PostMapping("/list")
+    public Result<BasePageVO<HouseVO>> list(@Validated @RequestBody HouseListReqDTO houseListReqDTO) {
+        BasePageDTO<HouseDescDTO> houseDescList = houseService.list(houseListReqDTO);
+        BasePageVO<HouseVO> result = new BasePageVO<>();
+        BeanCopyUtil.copyProperties(houseDescList, result);
+        return Result.success(result);
+    }
 
-//    /**
-//     * 更新房源状态
-//     *
-//     * @param houseStatusEditReqDTO 房源状态修改参数
-//     * @return 修改结果
-//     */
-//    @PostMapping("/status/edit")
-//    public Result<?> editStatus(@Validated @RequestBody HouseStatusEditReqDTO houseStatusEditReqDTO) {
-//        houseService.editStatus(houseStatusEditReqDTO);
-//        return Result.success();
-//    }
-//
-//
+    /**
+     * 更新房源状态
+     *
+     * @param houseStatusEditReqDTO 房源状态修改参数
+     * @return 修改结果
+     */
+    @PostMapping("/status/edit")
+    public Result<?> editStatus(@Validated @RequestBody HouseStatusEditReqDTO houseStatusEditReqDTO) {
+        houseService.editStatus(houseStatusEditReqDTO);
+        return Result.success();
+    }
+
+
 //    /**
 //     * 刷新房源缓存
 //     */

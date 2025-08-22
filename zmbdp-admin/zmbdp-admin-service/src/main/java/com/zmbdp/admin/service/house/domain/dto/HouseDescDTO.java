@@ -54,6 +54,14 @@ public class HouseDescDTO {
      * 详细地址
      */
     private String detailAddress;
+
+    /**
+     * 房源状态
+     */
     private String status;
+
+    /**
+     * 出租时间段
+     */
     private String rentTimeCode;
 }

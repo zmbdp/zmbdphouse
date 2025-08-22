@@ -6,8 +6,7 @@ import com.zmbdp.admin.api.house.domain.dto.DeviceDTO;
 import com.zmbdp.admin.api.house.domain.dto.TagDTO;
 import com.zmbdp.admin.service.config.mapper.SysDictionaryDataMapper;
 import com.zmbdp.admin.service.config.service.ISysDictionaryService;
-import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
-import com.zmbdp.admin.service.house.domain.dto.HouseDTO;
+import com.zmbdp.admin.service.house.domain.dto.*;
 import com.zmbdp.admin.service.house.domain.entity.*;
 import com.zmbdp.admin.service.house.domain.enums.HouseStatusEnum;
 import com.zmbdp.admin.service.house.mapper.*;
@@ -17,12 +16,19 @@ import com.zmbdp.admin.service.map.mapper.RegionMapper;
 import com.zmbdp.admin.service.user.domain.entity.AppUser;
 import com.zmbdp.admin.service.user.mapper.AppUserMapper;
 import com.zmbdp.common.bloomfilter.service.BloomFilterService;
+import com.zmbdp.common.core.domain.dto.BasePageDTO;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.core.utils.JsonUtil;
+import com.zmbdp.common.core.utils.StringUtil;
+import com.zmbdp.common.core.utils.TimestampUtil;
 import com.zmbdp.common.domain.domain.ResultCode;
 import com.zmbdp.common.domain.exception.ServiceException;
 import com.zmbdp.common.redis.service.RedisService;
+import com.zmbdp.common.redis.service.RedissonLockService;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +66,7 @@ public class HouseServiceImpl implements IHouseService {
     /**
      * 锁 key
      */
-    private static final String LOCK_KEY = "scheduledTask:lock";
+    private static final String HOUSE_LOCK_KEY = "house:lock";
 
     /**
      * 房源表 mapper
@@ -127,6 +133,55 @@ public class HouseServiceImpl implements IHouseService {
      */
     @Autowired
     private BloomFilterService bloomFilterService;
+
+    /**
+     * Redisson 分布式锁服务
+     */
+    @Autowired
+    private RedissonLockService redissonLockService;
+
+    /**
+     * 初始化房源数据
+     */
+    @PostConstruct
+    public void initHouse() {
+        // 加锁
+        RLock lock = redissonLockService.acquire(HOUSE_LOCK_KEY, 3, TimeUnit.SECONDS);
+        if (null == lock) {
+            log.info("房源数据预热已获取锁失败，跳过执行");
+            return;
+        }
+        try {
+            // 缓存预热房源信息
+            // 先拿出所有数据
+            List<Long> houseIds = houseMapper.selectHouseIds();
+            // 房源信息
+            loadHouseInfo(houseIds);
+        } catch (Exception e) {
+            log.error("房源数据预热异常", e);
+        } finally {
+            // 释放锁
+            redissonLockService.releaseLock(lock);
+        }
+    }
+
+    /**
+     * 缓存房源信息
+     *
+     * @param houseIds 房源 id 列表
+     */
+    private void loadHouseInfo(List<Long> houseIds) {
+        if (houseIds == null) {
+            log.warn("没有房源数据");
+            return;
+        }
+        for (Long houseId : houseIds) {
+            HouseDTO houseDTO = getHouseDTObyId(houseId);
+            if (houseDTO != null) {
+                cacheHouse(houseDTO);
+            }
+        }
+    }
 
     /**
      * 添加或编辑房源
@@ -659,5 +714,100 @@ public class HouseServiceImpl implements IHouseService {
             // 对于房源完整信息，是否存在于 redis，不需要强一致性。
             // 因为 C端查询时，如果 redis 不存在，可以通过查 MySQL 获取到数据，让后再放入 Redis。
         }
+    }
+
+    /**
+     * 查询房源摘要列表（支持翻页、支持筛选）
+     *
+     * @param houseListReqDTO 查询参数
+     * @return 房源摘要列表
+     */
+    @Override
+    public BasePageDTO<HouseDescDTO> list(HouseListReqDTO houseListReqDTO) {
+
+        BasePageDTO<HouseDescDTO> result = new BasePageDTO<>();
+
+        // 查询总数：联表查询
+        // 涉及 house_status、house 两张表
+
+        // 先查询一下符合条件的总数
+        Long totals = houseMapper.selectCountWithStatus(houseListReqDTO);
+
+        // 为空就直接返回空就行
+        if (0 == totals) {
+            result.setTotals(0);
+            result.setTotalPages(0);
+            result.setList(List.of());
+            log.info("查询的房源列表为空！HouseListReqDTO:{}", JsonUtil.classToJson(houseListReqDTO));
+            return result;
+        }
+
+        // 分页查询
+        List<HouseDescDTO> houses = houseMapper.selectPageWithStatus(houseListReqDTO);
+        result.setTotals(totals.intValue());
+        result.setTotalPages(BasePageDTO.calculateTotalPages(totals, houseListReqDTO.getPageSize()));
+        // 判断分页查询出来的结果是否为空，可能是超页 (查询第三页，可是第三页没有数据)
+        if (CollectionUtils.isEmpty(houses)) {
+            log.info("超出查询房源列表范围！HouseListReqDTO:{}", JsonUtil.classToJson(houseListReqDTO));
+            result.setList(List.of());
+            return result;
+        }
+        result.setList(houses);
+        return result;
+    }
+
+    /**
+     * 更新房源状态
+     *
+     * @param houseStatusEditReqDTO 房源状态修改参数
+     */
+    @Override
+    public void editStatus(HouseStatusEditReqDTO houseStatusEditReqDTO) {
+        // 检测房源是否存在
+        if (!bloomFilterService.mightContain(HOUSE_PREFIX + houseStatusEditReqDTO.getHouseId())) {
+            log.warn("要修改状态的房源不存在！houseId: {}", houseStatusEditReqDTO.getHouseId());
+            throw new ServiceException("房源不存在，无法修改状态！");
+        }
+        House house = houseMapper.selectById(houseStatusEditReqDTO.getHouseId());
+        if (null == house) {
+            log.warn("要修改状态的房源不存在！houseId: {}", houseStatusEditReqDTO.getHouseId());
+            throw new ServiceException("房源不存在，无法修改状态！");
+        }
+        // 根据房源 id，查询房源状态映射表，然后修改
+        HouseStatus houseStatus = houseStatusMapper.selectOne(new LambdaQueryWrapper<HouseStatus>()
+                .eq(HouseStatus::getHouseId, house.getId())
+        );
+        if (null == houseStatus || StringUtil.isEmpty(houseStatus.getStatus())) {
+            throw new ServiceException("房源状态不存在，无法修改状态！");
+        }
+
+        // 校验状态传参 (status是枚举)
+        HouseStatusEnum statusEnum = HouseStatusEnum.getByName(houseStatusEditReqDTO.getStatus());
+        if (null == statusEnum) {
+            throw new ServiceException("要修改的房源状态有误，无法修改状态！");
+        }
+        // 更新数据库 (house_status)
+        houseStatus.setStatus(houseStatusEditReqDTO.getStatus());
+        // 如果是出租中，则设置出租开始时间、出租结束时间
+        if (HouseStatusEnum.RENTING.name().equalsIgnoreCase(houseStatusEditReqDTO.getStatus())) {
+
+            // 校验是否传了出租时长码
+            if(StringUtils.isEmpty(houseStatusEditReqDTO.getRentTimeCode())) {
+                throw new ServiceException("出租时长不能为空，无法修改状态！");
+            }
+
+            houseStatus.setRentTimeCode(houseStatusEditReqDTO.getRentTimeCode());
+            houseStatus.setRentStartTime(TimestampUtil.getCurrentMillis());
+            switch (houseStatusEditReqDTO.getRentTimeCode()) {
+                case "one_year" -> houseStatus.setRentEndTime(TimestampUtil.getYearLaterMillis(1L));
+                case "half_year" -> houseStatus.setRentEndTime(TimestampUtil.getMonthsLaterMillis(6L));
+                case "thirty_seconds" -> houseStatus.setRentEndTime(TimestampUtil.getSecondsLaterMillis(30L));
+                default -> throw new ServiceException("出租时长错误，无法修改状态！");
+            }
+        }
+        houseStatusMapper.updateById(houseStatus);
+
+        // 更新缓存
+        cacheHouse(house.getId());
     }
 }
