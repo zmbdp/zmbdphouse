@@ -145,16 +145,24 @@ public class HouseServiceImpl implements IHouseService {
      */
     @PostConstruct
     public void initHouse() {
-        // 加锁
+        // 缓存预热房源信息
+
+        // 加锁（布隆过滤器得单独处理，因为是一级缓存，放到锁里面执行一次的话就不对劲）
+        // 先拿出所有数据
+        List<Long> houseIds = houseMapper.selectHouseIds();
+        if (houseIds.isEmpty()) {
+            log.info("没有房源数据");
+            return;
+        }
+        for (Long houseId : houseIds) {
+            bloomFilterService.put(HOUSE_PREFIX + String.valueOf(houseId));
+        }
         RLock lock = redissonLockService.acquire(HOUSE_LOCK_KEY, 3, TimeUnit.SECONDS);
         if (null == lock) {
             log.info("房源数据预热已获取锁失败，跳过执行");
             return;
         }
         try {
-            // 缓存预热房源信息
-            // 先拿出所有数据
-            List<Long> houseIds = houseMapper.selectHouseIds();
             // 房源信息
             loadHouseInfo(houseIds);
         } catch (Exception e) {
@@ -501,6 +509,8 @@ public class HouseServiceImpl implements IHouseService {
         }
         // 缓存
         cacheHouse(houseDTO);
+        // 布隆过滤器
+        bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
     }
 
     /**
@@ -537,7 +547,8 @@ public class HouseServiceImpl implements IHouseService {
 
         // mysql 存在，缓存房源详情
         cacheHouse(houseDTO);
-
+        // 布隆过滤器
+        bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
         // 返回
         return houseDTO;
     }
@@ -605,8 +616,6 @@ public class HouseServiceImpl implements IHouseService {
         // 缓存
         try {
             redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(), houseDTO);
-            // 布隆过滤器
-            bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
         } catch (Exception e) {
             log.error("缓存房源完整信息时发生异常，houseDTO: {}", JsonUtil.classToJson(houseDTO), e);
         }

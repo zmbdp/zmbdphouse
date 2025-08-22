@@ -21,6 +21,39 @@ public class RedissonLockService {
     private final RedissonClient redissonClient;
 
     /**
+     * 获取有看门狗的锁，并且没获取到，就一直会被阻塞
+     *
+     * @param lockKey 锁的 key
+     * @return RLock 锁实例（获取失败返回 null）
+     */
+    public RLock acquire(String lockKey) {
+        try {
+            final RLock lock = redissonClient.getLock(lockKey);
+            lock.lock(-1, TimeUnit.SECONDS);
+            return lock;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 获取锁，并且没获取到，就一直会被阻塞
+     *
+     * @param lockKey 锁的 key
+     * @param expire  锁有效期（毫秒）
+     * @return RLock 锁实例（获取失败返回 null）
+     */
+    public RLock acquire(String lockKey, long expire) {
+        try {
+            final RLock lock = redissonClient.getLock(lockKey);
+            lock.lock(expire, TimeUnit.SECONDS);
+            return lock;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 获取有看门狗的锁
      *
      * @param lockKey  锁的 key
