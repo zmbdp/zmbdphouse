@@ -1,10 +1,9 @@
 package com.zmbdp.admin.service.house.service.impl;
 
-import com.zmbdp.admin.api.house.domain.dto.TagDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zmbdp.admin.api.config.domain.dto.DictionaryDataDTO;
 import com.zmbdp.admin.api.house.domain.dto.DeviceDTO;
-import com.zmbdp.admin.service.config.domain.entity.SysDictionaryData;
+import com.zmbdp.admin.api.house.domain.dto.TagDTO;
 import com.zmbdp.admin.service.config.mapper.SysDictionaryDataMapper;
 import com.zmbdp.admin.service.config.service.ISysDictionaryService;
 import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
@@ -17,6 +16,7 @@ import com.zmbdp.admin.service.map.domain.entity.SysRegion;
 import com.zmbdp.admin.service.map.mapper.RegionMapper;
 import com.zmbdp.admin.service.user.domain.entity.AppUser;
 import com.zmbdp.admin.service.user.mapper.AppUserMapper;
+import com.zmbdp.common.bloomfilter.service.BloomFilterService;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.domain.domain.ResultCode;
@@ -42,9 +42,15 @@ import java.util.stream.Collectors;
 public class HouseServiceImpl implements IHouseService {
 
     /**
+     * 用户前缀
+     */
+    private static final String APP_USER_PREFIX = "app_user:";
+
+    /**
      * 城市房源映射锁前缀
      */
     private static final String CITY_HOUSE_PREFIX = "house:list:";
+
     /**
      * 城市完整信息 key 前缀
      */
@@ -114,6 +120,12 @@ public class HouseServiceImpl implements IHouseService {
      */
     @Autowired
     private ISysDictionaryService sysDictionaryService;
+
+    /**
+     * 布隆过滤器服务
+     */
+    @Autowired
+    private BloomFilterService bloomFilterService;
 
     /**
      * 添加或编辑房源
@@ -187,7 +199,7 @@ public class HouseServiceImpl implements IHouseService {
             addTagHouses(house.getId(), houseAddOrEditReqDTO.getTagCodes());
         }
 
-        // 设置房源完整信息缓存
+        // 设置房源完整信息缓存 (添加到布隆过滤器)
         cacheHouse(house.getId());
         return house.getId();
     }
@@ -200,7 +212,7 @@ public class HouseServiceImpl implements IHouseService {
     private void checkAddOrEditReq(HouseAddOrEditReqDTO houseAddOrEditReqDTO) {
         // 校验房东信息
         // 查询房东是否存在
-        if (houseAddOrEditReqDTO.getUserId() == null) {
+        if (houseAddOrEditReqDTO.getUserId() == null || !bloomFilterService.mightContain(APP_USER_PREFIX + String.valueOf(houseAddOrEditReqDTO.getUserId()))) {
             throw new ServiceException("房东 id 不存在！", ResultCode.INVALID_PARA.getCode());
         }
         AppUser appUser = appUserMapper.selectById(houseAddOrEditReqDTO.getUserId());
@@ -436,6 +448,17 @@ public class HouseServiceImpl implements IHouseService {
     }
 
     /**
+     * 查询房源详情（带缓存）
+     *
+     * @param houseId 房源 id
+     * @return 房源详情
+     */
+    @Override
+    public HouseDTO detail(Long houseId) {
+        return null;
+    }
+
+    /**
      * 根据房源 id 获取完整的房源信息
      *
      * @param houseId 房源 id
@@ -495,8 +518,9 @@ public class HouseServiceImpl implements IHouseService {
 
         // 缓存
         try {
-            redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(),
-                    JsonUtil.classToJson(houseDTO));
+            redisService.setCacheObject(HOUSE_PREFIX + houseDTO.getHouseId(), JsonUtil.classToJson(houseDTO));
+            // 布隆过滤器
+            bloomFilterService.put(HOUSE_PREFIX + houseDTO.getHouseId());
         } catch (Exception e) {
             log.error("缓存房源完整信息时发生异常，houseDTO:{}", JsonUtil.classToJson(houseDTO), e);
         }
@@ -505,10 +529,10 @@ public class HouseServiceImpl implements IHouseService {
     /**
      * 组装房源完整信息
      *
-     * @param house 房源信息
+     * @param house       房源信息
      * @param houseStatus 房源状态
-     * @param appUser 房东信息
-     * @param tagHouses 标签信息
+     * @param appUser     房东信息
+     * @param tagHouses   标签信息
      * @return 房源完整信息
      */
     private HouseDTO convertToHouseDTO(

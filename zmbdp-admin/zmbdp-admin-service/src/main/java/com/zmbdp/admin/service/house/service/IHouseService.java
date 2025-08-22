@@ -1,6 +1,7 @@
 package com.zmbdp.admin.service.house.service;
 
 import com.zmbdp.admin.service.house.domain.dto.HouseAddOrEditReqDTO;
+import com.zmbdp.admin.service.house.domain.dto.HouseDTO;
 
 /**
  * 房源服务业务层接口
@@ -23,4 +24,12 @@ public interface IHouseService {
      * @param houseId 房源 ID
      */
     void cacheHouse(Long houseId);
+
+    /**
+     * 查询房源详情（带缓存）
+     *
+     * @param houseId 房源 id
+     * @return 房源详情 DTO
+     */
+    HouseDTO detail(Long houseId);
 }
