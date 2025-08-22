@@ -629,7 +629,6 @@ public class HouseServiceImpl implements IHouseService {
         }
         try {
             return redisService.getCacheObject(HOUSE_PREFIX + houseId, HouseDTO.class);
-            // redisService.setCacheObject(HOUSE_PREFIX + houseId, JsonUtil.classToJson(new HouseDTO()), timeout, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("从缓存中获取房源详情异常，key:{}", HOUSE_PREFIX + houseId, e);
         }
