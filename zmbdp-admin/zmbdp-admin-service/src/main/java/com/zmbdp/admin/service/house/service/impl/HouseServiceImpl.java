@@ -801,6 +801,7 @@ public class HouseServiceImpl implements IHouseService {
             switch (houseStatusEditReqDTO.getRentTimeCode()) {
                 case "one_year" -> houseStatus.setRentEndTime(TimestampUtil.getYearLaterMillis(1L));
                 case "half_year" -> houseStatus.setRentEndTime(TimestampUtil.getMonthsLaterMillis(6L));
+                // 测试用的时间 30秒
                 case "thirty_seconds" -> houseStatus.setRentEndTime(TimestampUtil.getSecondsLaterMillis(30L));
                 default -> throw new ServiceException("出租时长错误，无法修改状态！");
             }
