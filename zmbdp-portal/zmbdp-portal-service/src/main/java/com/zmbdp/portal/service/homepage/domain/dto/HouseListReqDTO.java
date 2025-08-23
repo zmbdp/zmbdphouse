@@ -16,7 +16,7 @@ import java.util.List;
 public class HouseListReqDTO extends BasePageReqDTO {
 
     /**
-     * 城市id
+     * 城市 id
      */
     @NotNull(message = "城市id不能为空！")
     private Long cityId;
@@ -58,5 +58,4 @@ public class HouseListReqDTO extends BasePageReqDTO {
      */
     @NotNull(message = "用户当前纬度不能为空！")
     private Double latitude;
-
 }
