@@ -65,7 +65,7 @@ public interface IHouseService {
     void refreshHouseIds();
 
     /**
-     * 查询房源列表，支持筛选、排序、翻页
+     * 根据城市 id 和排序规则查询房源列表，支持筛选、排序、翻页
      *
      * @param searchHouseListReqDTO 查询参数
      * @return 房源列表
