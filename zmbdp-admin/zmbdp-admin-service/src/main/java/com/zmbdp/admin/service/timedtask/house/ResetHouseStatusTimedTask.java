@@ -55,8 +55,7 @@ public class ResetHouseStatusTimedTask {
     /**
      * 定时任务：刷新房源状态
      */
-    @Scheduled(cron = "*/10 * * * * ?")
-//    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "0 0 0 * * ?")
     public void resetHouseStatus() {
         log.info("开始执行定时任务：刷新房源状态");
 
