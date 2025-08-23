@@ -46,14 +46,14 @@ public class HomePageController {
         return Result.success(homePageService.getPullData(pullDataListReqDTO));
     }
 
-//    /**
-//     * 查询房源列表
-//     *
-//     * @param reqDTO 请求参数
-//     * @return 房源列表
-//     */
-//    @PostMapping("/house_list/search/nologin")
-//    public Result<BasePageVO<HouseDescVO>> houseList(@Validated @RequestBody HouseListReqDTO reqDTO) {
-//        return Result.success(homePageService.houseList(reqDTO));
-//    }
+    /**
+     * 查询房源列表
+     *
+     * @param reqDTO 筛选信息
+     * @return 房源列表
+     */
+    @PostMapping("/house_list/search/nologin")
+    public Result<BasePageVO<HouseDescVO>> houseList(@Validated @RequestBody HouseListReqDTO reqDTO) {
+        return Result.success(homePageService.houseList(reqDTO));
+    }
 }

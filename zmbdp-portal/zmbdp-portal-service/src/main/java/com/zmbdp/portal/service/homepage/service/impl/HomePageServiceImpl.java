@@ -6,12 +6,15 @@ import com.zmbdp.admin.api.map.feign.MapServiceApi;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.domain.domain.Result;
 import com.zmbdp.common.domain.domain.ResultCode;
+import com.zmbdp.common.domain.domain.vo.BasePageVO;
 import com.zmbdp.common.domain.exception.ServiceException;
 import com.zmbdp.portal.service.homepage.domain.dto.CityDescDTO;
 import com.zmbdp.portal.service.homepage.domain.dto.DictDataDTO;
+import com.zmbdp.portal.service.homepage.domain.dto.HouseListReqDTO;
 import com.zmbdp.portal.service.homepage.domain.dto.PullDataListReqDTO;
 import com.zmbdp.portal.service.homepage.domain.vo.CityDescVO;
 import com.zmbdp.portal.service.homepage.domain.vo.DictVO;
+import com.zmbdp.portal.service.homepage.domain.vo.HouseDescVO;
 import com.zmbdp.portal.service.homepage.domain.vo.PullDataListVO;
 import com.zmbdp.portal.service.homepage.service.IDictionaryService;
 import com.zmbdp.portal.service.homepage.service.IHomePageService;
@@ -23,7 +26,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 首页服务实现类
@@ -73,8 +75,8 @@ public class HomePageServiceImpl implements IHomePageService {
         Result<RegionCityVo> regionCityVoResult = mapServiceApi.locateCityByLocation(locationReqDTO);
         if (
                 regionCityVoResult == null ||
-                regionCityVoResult.getCode() != ResultCode.SUCCESS.getCode() ||
-                regionCityVoResult.getData() == null
+                        regionCityVoResult.getCode() != ResultCode.SUCCESS.getCode() ||
+                        regionCityVoResult.getData() == null
         ) {
             throw new ServiceException("城市定位失败！", ResultCode.ERROR.getCode());
         }
@@ -114,5 +116,16 @@ public class HomePageServiceImpl implements IHomePageService {
         });
         result.setDictMap(dictMap);
         return result;
+    }
+
+    /**
+     * 查询房源列表
+     *
+     * @param reqDTO 筛选信息
+     * @return 房源列表
+     */
+    @Override
+    public BasePageVO<HouseDescVO> houseList(HouseListReqDTO reqDTO) {
+        return null;
     }
 }
