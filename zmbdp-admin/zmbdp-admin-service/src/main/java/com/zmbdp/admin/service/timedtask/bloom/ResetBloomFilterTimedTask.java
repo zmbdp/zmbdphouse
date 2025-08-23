@@ -67,6 +67,7 @@ public class ResetBloomFilterTimedTask {
     /**
      * 房源表
      */
+    @Autowired
     private HouseMapper houseMapper;
 
     /**
