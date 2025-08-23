@@ -164,7 +164,7 @@ public class HouseServiceImpl implements IHouseService {
         }
         try {
             // 房源信息
-            loadHouseInfo(houseIds);
+            refreshHouseIds();
         } catch (Exception e) {
             log.error("房源数据预热异常", e);
         } finally {
@@ -173,23 +173,6 @@ public class HouseServiceImpl implements IHouseService {
         }
     }
 
-    /**
-     * 缓存房源信息
-     *
-     * @param houseIds 房源 id 列表
-     */
-    private void loadHouseInfo(List<Long> houseIds) {
-        if (houseIds == null) {
-            log.warn("没有房源数据");
-            return;
-        }
-        for (Long houseId : houseIds) {
-            HouseDTO houseDTO = getHouseDTObyId(houseId);
-            if (houseDTO != null) {
-                cacheHouse(houseDTO);
-            }
-        }
-    }
 
     /**
      * 添加或编辑房源
@@ -276,7 +259,7 @@ public class HouseServiceImpl implements IHouseService {
     private void checkAddOrEditReq(HouseAddOrEditReqDTO houseAddOrEditReqDTO) {
         // 校验房东信息
         // 查询房东是否存在
-        if (houseAddOrEditReqDTO.getUserId() == null || !bloomFilterService.mightContain(APP_USER_PREFIX + String.valueOf(houseAddOrEditReqDTO.getUserId()))) {
+        if (houseAddOrEditReqDTO.getUserId() == null || houseAddOrEditReqDTO.getUserId() < 0 || !bloomFilterService.mightContain(APP_USER_PREFIX + String.valueOf(houseAddOrEditReqDTO.getUserId()))) {
             throw new ServiceException("房东 id 不存在！", ResultCode.INVALID_PARA.getCode());
         }
         AppUser appUser = appUserMapper.selectById(houseAddOrEditReqDTO.getUserId());
@@ -801,7 +784,7 @@ public class HouseServiceImpl implements IHouseService {
         if (HouseStatusEnum.RENTING.name().equalsIgnoreCase(houseStatusEditReqDTO.getStatus())) {
 
             // 校验是否传了出租时长码
-            if(StringUtils.isEmpty(houseStatusEditReqDTO.getRentTimeCode())) {
+            if (StringUtils.isEmpty(houseStatusEditReqDTO.getRentTimeCode())) {
                 throw new ServiceException("出租时长不能为空，无法修改状态！");
             }
 
@@ -819,5 +802,61 @@ public class HouseServiceImpl implements IHouseService {
 
         // 更新缓存
         cacheHouse(house.getId());
+    }
+
+    /**
+     * 根据房东 id 查询其下房源 id 列表
+     *
+     * @param userId 房东 id
+     * @return 房源 id 列表
+     */
+    @Override
+    public List<Long> listByUserId(Long userId) {
+        if (null == userId || userId < 0 || !bloomFilterService.mightContain(APP_USER_PREFIX + String.valueOf(userId))) {
+            return List.of();
+        }
+
+        List<House> houses = houseMapper.selectList(
+                new LambdaQueryWrapper<House>()
+                        .eq(House::getUserId, userId));
+        return houses.stream().map(House::getId)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 刷新缓存的房源
+     */
+    @Override
+    public void refreshHouseIds() {
+        // 查询全量城市列表（2级城市）
+        List<SysRegion> sysRegions = regionMapper.selectList(new LambdaQueryWrapper<SysRegion>()
+                .eq(SysRegion::getLevel, "2"));
+
+        for (SysRegion sysRegion : sysRegions) {
+            // 删除当前城市下所有的房源列表映射（Redis）
+            Long cityId = sysRegion.getId();
+            redisService.removeForAllList(CITY_HOUSE_PREFIX + cityId);
+
+            // 查询当前城市下所有的房源列表（MySQL）
+            List<CityHouse> cityHouseList = cityHouseMapper.selectList(new LambdaQueryWrapper<CityHouse>()
+                    .eq(CityHouse::getCityId, cityId)
+            );
+
+            // 设置当前城市下所有的房源列表映射（Redis）
+            if (!CollectionUtils.isEmpty(cityHouseList)) {
+                redisService.setCacheList(CITY_HOUSE_PREFIX + cityId,
+                        cityHouseList.stream()
+                                .map(CityHouse::getHouseId)
+                                .distinct() // 去重
+                                .toList()
+                );
+            }
+
+            // 更新房源列表详细信息（Redis）
+            for (CityHouse cityHouse : cityHouseList) {
+                cacheHouse(cityHouse.getHouseId());
+            }
+        }
     }
 }

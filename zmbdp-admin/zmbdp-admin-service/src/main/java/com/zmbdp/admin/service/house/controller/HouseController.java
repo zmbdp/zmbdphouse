@@ -85,14 +85,14 @@ public class HouseController implements HouseServiceApi {
     }
 
 
-//    /**
-//     * 刷新房源缓存
-//     */
-//    @GetMapping("/refresh")
-//    public Result<Void> refreshHouseIds() {
-//        houseService.refreshHouseIds();
-//        return Result.success();
-//    }
+    /**
+     * 刷新房源缓存
+     */
+    @GetMapping("/refresh")
+    public Result<Void> refreshHouseIds() {
+        houseService.refreshHouseIds();
+        return Result.success();
+    }
 
     /**
      * 查询房源列表，支持筛选、排序、翻页
@@ -103,7 +103,7 @@ public class HouseController implements HouseServiceApi {
     @Override
     public Result<BasePageVO<HouseDetailVO>> searchList(@Validated SearchHouseListReqDTO searchHouseListReqDTO) {
 //        BasePageVO<HouseDetailVO> result = new BasePageVO<>();
-//        BasePageDTO<HouseDTO> searchDTO =  houseService.searchList(searchHouseListReqDTO);
+//        BasePageDTO<HouseDTO> searchDTO = houseService.searchList(searchHouseListReqDTO);
 //        result.setTotals(searchDTO.getTotals());
 //        result.setTotalPages(searchDTO.getTotalPages());
 //        result.setList(BeanCopyUtil.copyListProperties(searchDTO.getList(), HouseDetailVO::new));

@@ -3,6 +3,8 @@ package com.zmbdp.admin.service.house.service;
 import com.zmbdp.admin.service.house.domain.dto.*;
 import com.zmbdp.common.core.domain.dto.BasePageDTO;
 
+import java.util.List;
+
 /**
  * 房源服务业务层接口
  *
@@ -47,4 +49,17 @@ public interface IHouseService {
      * @param houseStatusEditReqDTO 房源状态修改参数
      */
     void editStatus(HouseStatusEditReqDTO houseStatusEditReqDTO);
+
+    /**
+     * 根据房东 id 查询其下房源 id 列表
+     *
+     * @param userId 房东 id
+     * @return 房源 id 列表
+     */
+    List<Long> listByUserId(Long userId);
+
+    /**
+     * 刷新房源缓存
+     */
+    void refreshHouseIds();
 }
