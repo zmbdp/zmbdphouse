@@ -64,7 +64,7 @@ public class HouseServiceImpl implements IHouseService {
     private static final String HOUSE_PREFIX = "house:";
 
     /**
-     * 锁 key
+     * 锁 key (初始化的时候用)
      */
     private static final String HOUSE_LOCK_KEY = "house:lock";
 

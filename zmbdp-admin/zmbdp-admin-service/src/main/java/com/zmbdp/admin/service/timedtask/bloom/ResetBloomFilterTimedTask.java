@@ -50,7 +50,7 @@ public class ResetBloomFilterTimedTask {
     /**
      * 布隆过滤器锁 key
      */
-    private static final String BLOOM_FILTER_LOCK = "bloom:filter:lock";
+    private static final String BLOOM_FILTER_LOCK = "bloom:filter:task:lock";
 
     /**
      * 布隆过滤器服务
@@ -93,14 +93,14 @@ public class ResetBloomFilterTimedTask {
             return;
         }
 
-        // 获取锁，因为布隆过滤器是一级缓存，如果说指定超时时间，就刷新不了了，所有这里要让他一直阻塞，直到获取到锁
-        RLock lock = redissonLockService.acquire(BLOOM_FILTER_LOCK);
+        // 获取锁
+        RLock lock = redissonLockService.acquire(BLOOM_FILTER_LOCK, 10, TimeUnit.SECONDS);
 
         if (null == lock) {
-            log.info("布隆过滤器刷新任务已获取锁失败，跳过执行");
+            log.info("刷新布隆过滤器定时任务已获取锁失败，跳过执行");
             return;
         }
-        log.info("开始执行布隆过滤器刷新任务 =======================");
+        log.info("开始执行刷新布隆过滤器定时任务 =======================");
 
         // 重置布隆过滤器
         // 打印一下数量
@@ -114,9 +114,9 @@ public class ResetBloomFilterTimedTask {
             // 刷新房源的布隆过滤器
             refreshHouseBloomFilter();
 
-            log.info("布隆过滤器刷新任务执行完成 =======================");
+            log.info("刷新布隆过滤器定时任务执行完成 =======================");
         } catch (Exception e) {
-            log.error("布隆过滤器刷新任务执行失败 =======================", e);
+            log.error("刷新布隆过滤器定时任务执行失败 =======================", e);
         } finally {
             // 释放锁
             redissonLockService.releaseLock(lock);
