@@ -3,6 +3,7 @@ package com.zmbdp.admin.service.house.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zmbdp.admin.api.config.domain.dto.DictionaryDataDTO;
 import com.zmbdp.admin.api.house.domain.dto.DeviceDTO;
+import com.zmbdp.admin.api.house.domain.dto.SearchHouseListReqDTO;
 import com.zmbdp.admin.api.house.domain.dto.TagDTO;
 import com.zmbdp.admin.service.config.mapper.SysDictionaryDataMapper;
 import com.zmbdp.admin.service.config.service.ISysDictionaryService;
@@ -844,5 +845,16 @@ public class HouseServiceImpl implements IHouseService {
                 cacheHouse(cityHouse.getHouseId());
             }
         }
+    }
+
+    /**
+     * 查询房源列表，支持筛选、排序、翻页
+     *
+     * @param searchHouseListReqDTO 查询参数
+     * @return 房源列表
+     */
+    @Override
+    public BasePageDTO<HouseDTO> searchList(SearchHouseListReqDTO searchHouseListReqDTO) {
+        return null;
     }
 }

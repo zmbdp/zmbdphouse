@@ -1,5 +1,6 @@
 package com.zmbdp.admin.service.house.service;
 
+import com.zmbdp.admin.api.house.domain.dto.SearchHouseListReqDTO;
 import com.zmbdp.admin.service.house.domain.dto.*;
 import com.zmbdp.common.core.domain.dto.BasePageDTO;
 
@@ -62,4 +63,12 @@ public interface IHouseService {
      * 刷新房源缓存
      */
     void refreshHouseIds();
+
+    /**
+     * 查询房源列表，支持筛选、排序、翻页
+     *
+     * @param searchHouseListReqDTO 查询参数
+     * @return 房源列表
+     */
+    BasePageDTO<HouseDTO> searchList(SearchHouseListReqDTO searchHouseListReqDTO);
 }
