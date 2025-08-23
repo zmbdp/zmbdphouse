@@ -61,8 +61,8 @@ public class ResetHouseStatusTimedTask {
         log.info("开始执行定时任务：刷新房源状态");
 
         // 加 Redisson 分布式锁
-        RLock rLock = redissonLockService.acquire(LOCK_KEY, 3, TimeUnit.SECONDS);
-        if (null == rLock) {
+        RLock lock = redissonLockService.acquire(LOCK_KEY, 3, TimeUnit.SECONDS);
+        if (null == lock) {
             log.info("刷新房源状态定时任务被其他实例执行！");
             return;
         }
@@ -88,7 +88,7 @@ public class ResetHouseStatusTimedTask {
                 houseService.editStatus(houseStatusEditReqDTO);
             }
         } finally {
-            redissonLockService.releaseLock(rLock);
+            redissonLockService.releaseLock(lock);
         }
     }
 }
