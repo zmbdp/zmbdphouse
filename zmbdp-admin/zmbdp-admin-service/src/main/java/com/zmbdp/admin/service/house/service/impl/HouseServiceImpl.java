@@ -285,20 +285,6 @@ public class HouseServiceImpl implements IHouseService {
         if (houseAddOrEditReqDTO.getTagCodes().size() != tags.size()) {
             throw new ServiceException("传递的标签列表有误！", ResultCode.INVALID_PARA.getCode());
         }
-        // 校验设备码，房源基本配置信息（字典里面的内容）
-        // 设备码：根据设备列表拿出查询出设备码
-        // 获取用户传入的设备代码列表
-//        List<String> devices = houseAddOrEditReqDTO.getDevices();
-//        // 从数据库中查询这些设备代码是否有效
-//        List<SysDictionaryData> devicesInDb = sysDictionaryDataMapper.selectList(
-//                new LambdaQueryWrapper<SysDictionaryData>()
-//                        .eq(SysDictionaryData::getTypeKey, "device_type")
-//                        .in(SysDictionaryData::getDataKey, devices)
-//        );
-
-        // 验证设备代码是否都有效
-
-        // 校验房源基本配置信息
 
     }
 

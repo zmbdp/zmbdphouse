@@ -1,8 +1,8 @@
 package com.zmbdp.mstemplate.service;
 
 
-import com.zmbdp.admin.api.config.frign.ArgumentServiceApi;
-import com.zmbdp.admin.api.config.frign.DictionaryServiceApi;
+import com.zmbdp.admin.api.config.feign.ArgumentServiceApi;
+import com.zmbdp.admin.api.config.feign.DictionaryServiceApi;
 import com.zmbdp.admin.api.map.feign.MapServiceApi;
 import com.zmbdp.file.api.feign.FileServiceApi;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
         DictionaryServiceApi.class, ArgumentServiceApi.class
 }) // 告诉 SpringCloud 这个类需要调用 FileServiceApi 服务
 public class MstemplateServiceApplication {
+
     /**
      * 启动方法
      *
@@ -33,5 +34,6 @@ public class MstemplateServiceApplication {
      */
     public static void main(String[] args) {
         SpringApplication.run(MstemplateServiceApplication.class, args);
+        log.info("模板服务启动成功......");
     }
 }

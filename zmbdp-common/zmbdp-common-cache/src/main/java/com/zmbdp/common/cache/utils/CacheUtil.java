@@ -54,7 +54,7 @@ public class CacheUtil {
      */
     public static <T> T getL2Cache(RedisService redisService, BloomFilterService bloomFilterService,
                                    String key, TypeReference<T> valueTypeRef, Cache<String, Object> caffeineCache) {
-        // 先检查布隆过滤器，如果确定不存在则直接返回null
+        // 先检查布隆过滤器，如果确定不存在则直接返回 null
         if (!bloomFilterService.mightContain(key)) {
             return null;
         }
