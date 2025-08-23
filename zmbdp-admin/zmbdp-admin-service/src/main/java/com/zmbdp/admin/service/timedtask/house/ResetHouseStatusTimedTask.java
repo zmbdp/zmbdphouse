@@ -74,6 +74,7 @@ public class ResetHouseStatusTimedTask {
 
             // 过滤需要刷新状态的房源列表（出租到期时间）
             List<HouseStatus> needConvertList = rentingHouses.stream()
+                    // 如果说出租到期时间小于当前时间，则需要刷新为上架状态
                     .filter(houseStatus -> null != houseStatus.getRentEndTime() && 0 > TimestampUtil.calculateDifferenceMillis(
                             TimestampUtil.getCurrentMillis(), houseStatus.getRentEndTime()
                     )).toList();
@@ -88,6 +89,8 @@ public class ResetHouseStatusTimedTask {
             }
         } finally {
             redissonLockService.releaseLock(lock);
+            log.info("刷新房源状态定时任务执行完成");
+
         }
     }
 }
