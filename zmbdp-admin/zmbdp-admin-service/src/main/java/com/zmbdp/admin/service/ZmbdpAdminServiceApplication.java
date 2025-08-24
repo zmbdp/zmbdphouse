@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author 稚名不带撇
  */
 @Slf4j
+@EnableScheduling // 启动定时任务
 @SpringBootApplication
-@EnableScheduling
 public class ZmbdpAdminServiceApplication {
 
     /**
