@@ -132,15 +132,69 @@ public class DictionaryServiceImpl implements IDictionaryService {
 
 
     /**
-     * 根据字典数据 keys 获取字典数据
+     * 根据字典数据 key 列表获取字典数据
      *
      * @param dataKeys 字典数据 keys
      * @return key: dataKey  value: data
      */
     @Override
     public Map<String, DictDataDTO> batchFindDictionaryData(List<String> dataKeys) {
-        return Map.of();
+        Map<String, DictDataDTO> resultMap = new HashMap<>();
+
+        // 查缓存: dataKey:DictDataDTO
+        List<String> noCacheDataKeys = new ArrayList<>();
+        for (String dataKey : dataKeys) {
+            DictDataDTO dictDataDTO = getDataCache(dataKey);
+            if (null == dictDataDTO) {
+                noCacheDataKeys.add(dataKey);
+            } else {
+                resultMap.put(dataKey, dictDataDTO);
+            }
+        }
+
+        // 全部存在：返回
+        if (CollectionUtils.isEmpty(noCacheDataKeys)) {
+            return resultMap;
+        }
+
+        // 不存在：feign
+        List<DictionaryDataDTO> dataDTOList = dictionaryServiceApi.getDicDataByKeys(noCacheDataKeys);
+        if (CollectionUtils.isEmpty(dataDTOList)) {
+            log.error("feign 字典数据不存在！noCacheDataKeys：{}", JsonUtil.classToJson(noCacheDataKeys));
+            return resultMap;
+        }
+
+        // 缓存结果
+        for (DictionaryDataDTO dictionaryDataDTO :  dataDTOList) {
+            DictDataDTO dictDataDTO = new DictDataDTO();
+            BeanCopyUtil.copyProperties(dictionaryDataDTO, dictDataDTO);
+            cacheData(dictionaryDataDTO.getDataKey(), dictDataDTO);
+            resultMap.put(dictionaryDataDTO.getDataKey(), dictDataDTO);
+        }
+        return resultMap;
     }
 
+    /**
+     * 根据字典类型查询缓存中的字典数据列表
+     * @param dataKey 字典数据键
+     * @return 字典数据
+     */
+    private DictDataDTO getDataCache(String dataKey) {
+        if (StringUtil.isEmpty(dataKey)) {
+            return null;
+        }
+        return redisService.getCacheObject(DICT_DATA_PREFIX + dataKey, DictDataDTO.class);
+    }
 
+    /**
+     * 缓存字典数据
+     * @param dataKey 字典数据业务主键
+     * @param dictDataDTO 字典数据对象
+     */
+    private void cacheData(String dataKey, DictDataDTO dictDataDTO) {
+        if (StringUtil.isEmpty(dataKey)) {
+            return;
+        }
+        redisService.setCacheObject(DICT_DATA_PREFIX + dataKey, dictDataDTO, DICT_DATA_TIMEOUT, TimeUnit.MINUTES);
+    }
 }

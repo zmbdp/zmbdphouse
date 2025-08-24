@@ -27,7 +27,6 @@ public interface HouseServiceApi {
     @PostMapping("/list/search")
     Result<BasePageVO<HouseDetailVO>> searchList(@RequestBody SearchHouseListReqDTO searchHouseListReqDTO);
 
-
     /**
      * 查询房源详情（带缓存）
      *

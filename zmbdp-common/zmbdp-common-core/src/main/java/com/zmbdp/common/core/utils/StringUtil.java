@@ -21,7 +21,7 @@ public class StringUtil extends StringUtils{
      * @return 是否匹配
      */
     public static boolean matches(String str, List<String> patternList) {
-        if (StringUtils.isEmpty(str) || CollectionUtils.isEmpty(patternList)) {
+        if (isEmpty(str) || CollectionUtils.isEmpty(patternList)) {
             return false;
         }
         for (String pattern : patternList) {
@@ -48,7 +48,7 @@ public class StringUtil extends StringUtils{
      * @return 是否匹配
      */
     public static boolean isMatch(String pattern, String url) {
-        if (StringUtils.isEmpty(url) || StringUtils.isEmpty(pattern)) {
+        if (isEmpty(url) || isEmpty(pattern)) {
             return false;
         }
         AntPathMatcher matcher = new AntPathMatcher();

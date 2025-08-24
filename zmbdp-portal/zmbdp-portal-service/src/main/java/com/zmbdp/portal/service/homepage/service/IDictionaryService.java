@@ -21,7 +21,7 @@ public interface IDictionaryService {
     Map<String, List<DictDataDTO>> batchFindDictionaryDataByTypes(List<String> types);
 
     /**
-     * 根据字典数据 keys 获取字典数据
+     * 根据字典数据 key 列表获取字典数据
      *
      * @param dataKeys 字典数据 keys
      * @return key: dataKey  value: data

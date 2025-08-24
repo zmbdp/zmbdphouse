@@ -1,9 +1,13 @@
 package com.zmbdp.portal.service.homepage.service.impl;
 
+import com.zmbdp.admin.api.house.domain.dto.SearchHouseListReqDTO;
+import com.zmbdp.admin.api.house.domain.vo.HouseDetailVO;
+import com.zmbdp.admin.api.house.feign.HouseServiceApi;
 import com.zmbdp.admin.api.map.domain.dto.LocationReqDTO;
 import com.zmbdp.admin.api.map.domain.vo.RegionCityVo;
 import com.zmbdp.admin.api.map.feign.MapServiceApi;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
+import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.domain.domain.Result;
 import com.zmbdp.common.domain.domain.ResultCode;
 import com.zmbdp.common.domain.domain.vo.BasePageVO;
@@ -22,10 +26,14 @@ import com.zmbdp.portal.service.homepage.service.IRegionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 首页服务实现类
@@ -41,6 +49,12 @@ public class HomePageServiceImpl implements IHomePageService {
      */
     @Autowired
     private MapServiceApi mapServiceApi;
+
+    /**
+     * 房源服务 Api
+     */
+    @Autowired
+    private HouseServiceApi houseServiceApi;
 
     /**
      * 调用 admin 地图服务 服务
@@ -126,6 +140,54 @@ public class HomePageServiceImpl implements IHomePageService {
      */
     @Override
     public BasePageVO<HouseDescVO> houseList(HouseListReqDTO reqDTO) {
-        return null;
+        SearchHouseListReqDTO searchHouseListReqDTO = new SearchHouseListReqDTO();
+        BeanCopyUtil.copyProperties(reqDTO, searchHouseListReqDTO);
+        // 先把房源列表查询出来
+        Result<BasePageVO<HouseDetailVO>> houseDetailVOResult = houseServiceApi.searchList(searchHouseListReqDTO);
+        if (
+                null == houseDetailVOResult ||
+                        houseDetailVOResult.getCode() != ResultCode.SUCCESS.getCode() ||
+                        null == houseDetailVOResult.getData()
+        ) {
+            log.error("查询房源列表失败！req: {}", JsonUtil.classToJson(searchHouseListReqDTO));
+            throw new ServiceException("查询房源列表失败！");
+        }
+        // 查到了就构造返回
+        BasePageVO<HouseDescVO> result = new BasePageVO<>();
+        result.setTotals(houseDetailVOResult.getData().getTotals());
+        result.setTotalPages(houseDetailVOResult.getData().getTotalPages());
+        result.setList(convertHouseList(houseDetailVOResult.getData().getList()));
+        return result;
+    }
+
+    /**
+     * 构造返回的房源列表 (英文转中文啥的，中文是根据字典数据表查的)
+     *
+     * @param houseDetailVOList 房源列表
+     * @return 房源列表
+     */
+    private List<HouseDescVO> convertHouseList(List<HouseDetailVO> houseDetailVOList) {
+        if (CollectionUtils.isEmpty(houseDetailVOList)) {
+            return List.of();
+        }
+
+        // 查字典：rentType，position:west（datakey）
+        List<String> dataKeys = houseDetailVOList.stream()
+                .flatMap(houseDetailVO -> Stream.of(houseDetailVO.getRentType(), houseDetailVO.getPosition()))
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, DictDataDTO> dictDataDTOMap = dictionaryService.batchFindDictionaryData(dataKeys);
+
+        return houseDetailVOList.stream().map(houseDetailVO -> {
+            HouseDescVO houseDescVO = new HouseDescVO();
+            BeanCopyUtil.copyProperties(houseDetailVO, houseDescVO);
+
+            // 根据字典数据映射 DTO，转成中文
+            DictDataDTO rentTypeData = dictDataDTOMap.get(houseDetailVO.getRentType());
+            houseDescVO.setRentType(rentTypeData.getValue());
+            DictDataDTO positionData = dictDataDTOMap.get(houseDetailVO.getPosition());
+            houseDescVO.setPosition(positionData.getValue());
+            return houseDescVO;
+        }).toList();
     }
 }

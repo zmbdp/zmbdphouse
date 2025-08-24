@@ -9,9 +9,13 @@ import com.zmbdp.admin.service.config.mapper.SysDictionaryDataMapper;
 import com.zmbdp.admin.service.config.service.ISysDictionaryService;
 import com.zmbdp.admin.service.house.domain.dto.*;
 import com.zmbdp.admin.service.house.domain.entity.*;
+import com.zmbdp.admin.service.house.domain.enums.HouseSortEnum;
 import com.zmbdp.admin.service.house.domain.enums.HouseStatusEnum;
 import com.zmbdp.admin.service.house.mapper.*;
 import com.zmbdp.admin.service.house.service.IHouseService;
+import com.zmbdp.admin.service.house.service.filter.IHouseFilter;
+import com.zmbdp.admin.service.house.service.strategy.ISortStrategy;
+import com.zmbdp.admin.service.house.service.strategy.SortStrategyFactory;
 import com.zmbdp.admin.service.map.domain.entity.SysRegion;
 import com.zmbdp.admin.service.map.mapper.RegionMapper;
 import com.zmbdp.admin.service.user.domain.entity.AppUser;
@@ -28,7 +32,6 @@ import com.zmbdp.common.redis.service.RedisService;
 import com.zmbdp.common.redis.service.RedissonLockService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -68,73 +71,63 @@ public class HouseServiceImpl implements IHouseService {
      * 锁 key (初始化的时候用)
      */
     private static final String HOUSE_LOCK_KEY = "house:lock";
-
+    @Autowired
+    private final Map<String, IHouseFilter> houseFilterMap = new HashMap<>();
     /**
      * 房源表 mapper
      */
     @Autowired
     private HouseMapper houseMapper;
-
     /**
      * 用户表 mapper
      */
     @Autowired
     private AppUserMapper appUserMapper;
-
     /**
      * 地区表 mapper
      */
     @Autowired
     private RegionMapper regionMapper;
-
     /**
      * 标签表 mapper
      */
     @Autowired
     private TagMapper tagMapper;
-
     /**
      * 城市房源映射表 mapper
      */
     @Autowired
     private CityHouseMapper cityHouseMapper;
-
     /**
      * 房源状态表 mapper
      */
     @Autowired
     private HouseStatusMapper houseStatusMapper;
-
     /**
      * 标签房源映射表 mapper
      */
     @Autowired
     private TagHouseMapper tagHouseMapper;
-
     /**
      * 数据字典表 mapper
      */
     @Autowired
     private SysDictionaryDataMapper sysDictionaryDataMapper;
-
     /**
      * Redis 服务
      */
     @Autowired
     private RedisService redisService;
-
     /**
      * 数据字典服务
      */
     @Autowired
     private ISysDictionaryService sysDictionaryService;
-
     /**
      * 布隆过滤器服务
      */
     @Autowired
     private BloomFilterService bloomFilterService;
-
     /**
      * Redisson 分布式锁服务
      */
@@ -314,7 +307,8 @@ public class HouseServiceImpl implements IHouseService {
         // 删除老的映射记录
         cityHouseMapper.delete(new LambdaQueryWrapper<CityHouse>()
                 .eq(CityHouse::getCityId, oldCityId)
-                .eq(CityHouse::getHouseId, houseId));
+                .eq(CityHouse::getHouseId, houseId)
+        );
 
         // 新增新的映射记录
         CityHouse cityHouse = new CityHouse();
@@ -369,7 +363,7 @@ public class HouseServiceImpl implements IHouseService {
         List<String> oldTagCods = oldTagHouses.stream()
                 .map(TagHouse::getTagCode)
                 .sorted()  // 排序
-                .collect(Collectors.toList());
+                .toList();
 
         // 然后再把新的标签码排序
         newTagCodes = newTagCodes.stream().sorted().collect(Collectors.toList());
@@ -717,7 +711,7 @@ public class HouseServiceImpl implements IHouseService {
             result.setTotals(0);
             result.setTotalPages(0);
             result.setList(List.of());
-            log.info("查询的房源列表为空！HouseListReqDTO:{}", JsonUtil.classToJson(houseListReqDTO));
+            log.info("查询的房源列表为空！HouseListReqDTO: {}", JsonUtil.classToJson(houseListReqDTO));
             return result;
         }
 
@@ -727,7 +721,7 @@ public class HouseServiceImpl implements IHouseService {
         result.setTotalPages(BasePageDTO.calculateTotalPages(totals, houseListReqDTO.getPageSize()));
         // 判断分页查询出来的结果是否为空，可能是超页 (查询第三页，可是第三页没有数据)
         if (CollectionUtils.isEmpty(houses)) {
-            log.info("超出查询房源列表范围！HouseListReqDTO:{}", JsonUtil.classToJson(houseListReqDTO));
+            log.info("超出查询房源列表范围！HouseListReqDTO: {}", JsonUtil.classToJson(houseListReqDTO));
             result.setList(List.of());
             return result;
         }
@@ -771,7 +765,7 @@ public class HouseServiceImpl implements IHouseService {
         if (HouseStatusEnum.RENTING.name().equalsIgnoreCase(houseStatusEditReqDTO.getStatus())) {
 
             // 校验是否传了出租时长码
-            if (StringUtils.isEmpty(houseStatusEditReqDTO.getRentTimeCode())) {
+            if (StringUtil.isEmpty(houseStatusEditReqDTO.getRentTimeCode())) {
                 throw new ServiceException("出租时长不能为空，无法修改状态！");
             }
 
@@ -855,6 +849,260 @@ public class HouseServiceImpl implements IHouseService {
      */
     @Override
     public BasePageDTO<HouseDTO> searchList(SearchHouseListReqDTO searchHouseListReqDTO) {
-        return null;
+        if (searchHouseListReqDTO.getCityId() < 0) {
+            log.error(": {}", searchHouseListReqDTO.getCityId());
+            throw new ServiceException(ResultCode.INVALID_PARA);
+        }
+        // 先获取城市下全量的房源信息列表
+        List<HouseDTO> houseDTOList = getCacheHouseListByCity(searchHouseListReqDTO.getCityId());
+
+        // 筛选、排序、分页
+        return filterHouse(houseDTOList, searchHouseListReqDTO);
+    }
+
+    /**
+     * 获取城市下全量的房源信息列表
+     *
+     * @param cityId 城市 id
+     * @return 城市下全量的房源信息列表
+     */
+    private List<HouseDTO> getCacheHouseListByCity(Long cityId) {
+        if (null == cityId) {
+            return List.of();
+        }
+
+        // 从缓存中获取城市下的房源 id 列表（Redis）
+        List<HouseDTO> resultList = new ArrayList<>();
+        List<Long> houseIds = getCacheCityHouses(cityId);
+        Set<Long> houseIdSet = new HashSet<>(Objects.requireNonNull(houseIds)); // 去重
+
+        // 根据房源 id 列表获取房源详细信息列表
+        for (Long houseId : houseIdSet) {
+            // 获取房源详细信息
+            HouseDTO houseDTO = detail(houseId);
+            if (null != houseDTO) {
+                // 不为空就添加到结果列表中
+                resultList.add(houseDTO);
+            }
+        }
+        return resultList;
+    }
+
+    /**
+     * 获取缓存的房源列表
+     *
+     * @param cityId 城市 id
+     * @return 城市下全量的房源 id 列表
+     */
+    private List<Long> getCacheCityHouses(Long cityId) {
+        if (null == cityId) {
+            return List.of();
+        }
+        List<Long> houseIds = new ArrayList<>();
+        try {
+            houseIds = redisService.getCacheList(CITY_HOUSE_PREFIX + cityId, Long.class);
+        } catch (Exception e) {
+            log.error("从缓存中获取城市下的房源列表异常，key: {}", CITY_HOUSE_PREFIX + cityId, e);
+        }
+        return houseIds;
+    }
+
+    /**
+     * 根据城市 id 筛选房源列表（加入设计模式后的新版）
+     *
+     * @param houseDTOList          房源列表
+     * @param searchHouseListReqDTO 查询参数
+     * @return 房源列表
+     */
+    private BasePageDTO<HouseDTO> filterHouse(List<HouseDTO> houseDTOList, SearchHouseListReqDTO searchHouseListReqDTO) {
+        // 先筛选，先筛选出符合条件的（用策略模式，多策略，全策略都要过一遍）
+        List<HouseDTO> validHouseDTOList = houseFilter(houseDTOList, searchHouseListReqDTO);
+
+        // 排序，根据一个排序策略排序（用工厂模式，多策略，只需要选择一个策略执行即可）
+        validHouseDTOList = houseSorting(validHouseDTOList, searchHouseListReqDTO);
+
+        // 分页
+        return housePage(validHouseDTOList, searchHouseListReqDTO);
+    }
+
+    /**
+     * 筛选
+     *
+     * @param houseDTOList          房源列表
+     * @param searchHouseListReqDTO 筛选条件
+     * @return 筛选后的房源列表
+     */
+    private List<HouseDTO> houseFilter(List<HouseDTO> houseDTOList, SearchHouseListReqDTO searchHouseListReqDTO) {
+        // houseFilterMap.values(): 拿取所有的筛选器实现类
+        return houseDTOList.stream().filter(houseDTO -> houseFilterMap.values().stream() // 让 houseDTO 走一遍全部的筛选策略
+                .allMatch(
+                        houseFilter -> {
+                            try {
+                                return houseFilter.filter(houseDTO, searchHouseListReqDTO);
+                            } catch (Exception e) {
+                                log.error("过滤房源发生异常，houseDTO:{}, filter:{}",
+                                        JsonUtil.classToJson(houseDTO),
+                                        houseFilter.getClass().getName(), e);
+                                return false;
+                            }
+                        }
+                )
+        ).toList();
+    }
+
+    /**
+     * 根据选择的策略排序
+     *
+     * @param houseDTOList          房源列表
+     * @param searchHouseListReqDTO 排序条件
+     * @return 过滤后的房源列表
+     */
+    private List<HouseDTO> houseSorting(List<HouseDTO> houseDTOList, SearchHouseListReqDTO searchHouseListReqDTO) {
+        // 多策略，只需要指定一个策略执行即可
+        // 工厂模式：工厂根据指定要求给我生产出一个策略即可
+        ISortStrategy sortStrategy = SortStrategyFactory.getSortStrategy(searchHouseListReqDTO.getSort());
+        return sortStrategy.sort(houseDTOList, searchHouseListReqDTO);
+    }
+
+    /**
+     * 分页
+     *
+     * @param houseDTOList          总房源列表
+     * @param searchHouseListReqDTO 筛选条件
+     * @return 房源列表
+     */
+    private BasePageDTO<HouseDTO> housePage(List<HouseDTO> houseDTOList, SearchHouseListReqDTO searchHouseListReqDTO) {
+        List<HouseDTO> pagedHouseDTOList = houseDTOList.stream()
+                .skip(searchHouseListReqDTO.getOffset())
+                .limit(searchHouseListReqDTO.getPageSize())
+                .collect(Collectors.toList());
+        BasePageDTO<HouseDTO> result = new BasePageDTO<>();
+        result.setTotals(houseDTOList.size());
+        result.setTotalPages(
+                BasePageDTO.calculateTotalPages(houseDTOList.size(), searchHouseListReqDTO.getPageSize()));
+        result.setList(pagedHouseDTOList);
+        return result;
+    }
+
+    /**
+     * 筛选数据
+     * @param houseDTOList 房源列表
+     * @param reqDTO 筛选参数
+     * @return 筛选后的房源列表
+     */
+    private BasePageDTO<HouseDTO> filterHouseV1(List<HouseDTO> houseDTOList, SearchHouseListReqDTO reqDTO) {
+        // 筛选
+        if (null != reqDTO.getRegionId()) {
+            houseDTOList = houseDTOList.stream()
+                    .filter(houseDTO -> houseDTO.getRegionId().equals(reqDTO.getRegionId()))
+                    .collect(Collectors.toList());
+        }
+        if (!CollectionUtils.isEmpty(reqDTO.getRentTypes())) {
+            houseDTOList = houseDTOList.stream()
+                    .filter(houseDTO -> reqDTO.getRentTypes().contains(houseDTO.getRentType()))
+                    .collect(Collectors.toList());
+        }
+        if (!CollectionUtils.isEmpty(reqDTO.getRooms())) {
+            houseDTOList = houseDTOList.stream()
+                    .filter(houseDTO -> reqDTO.getRooms().contains(houseDTO.getRooms()))
+                    .collect(Collectors.toList());
+        }
+        if (!CollectionUtils.isEmpty(reqDTO.getRentalRanges())) {
+            houseDTOList = houseDTOList.stream()
+                    .filter(houseDTO -> filterHouseByRentalRanges(houseDTO.getPrice(), reqDTO.getRentalRanges()))
+                    .collect(Collectors.toList());
+        }
+        houseDTOList = houseDTOList.stream()
+                .filter(houseDTO -> houseDTO.getStatus().equalsIgnoreCase(HouseStatusEnum.UP.name()))
+                .collect(Collectors.toList());
+        // 排序
+        if (StringUtil.isNotEmpty(reqDTO.getSort())) {
+
+            if (reqDTO.getSort().equalsIgnoreCase(HouseSortEnum.DISTANCE.name())) {
+                houseDTOList = houseDTOList.stream()
+                        .sorted(Comparator.comparingDouble(
+                                houseDTO -> houseDTO.calculateDistance(reqDTO.getLongitude(), reqDTO.getLatitude())))
+                        .collect(Collectors.toList());
+
+            } else if (reqDTO.getSort().equalsIgnoreCase(HouseSortEnum.PRICE_ASC.name())) {
+                houseDTOList = houseDTOList.stream()
+                        .sorted(Comparator.comparingDouble(HouseDTO::getPrice))
+                        .collect(Collectors.toList());
+
+            } else if (reqDTO.getSort().equalsIgnoreCase(HouseSortEnum.PRICE_DESC.name())) {
+                houseDTOList = houseDTOList.stream()
+                        .sorted(Comparator.comparingDouble(HouseDTO::getPrice).reversed())
+                        .collect(Collectors.toList());
+            } else {
+                log.error("不存在的排序规则，将按默认距离排序！");
+                houseDTOList = houseDTOList.stream()
+                        .sorted(Comparator.comparingDouble(
+                                houseDTO -> houseDTO.calculateDistance(reqDTO.getLongitude(), reqDTO.getLatitude())))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        // 翻页
+        // 获取分页后的列表
+        List<HouseDTO> pagedHouseDTOList = houseDTOList.stream()
+                .skip(reqDTO.getOffset())
+                .limit(reqDTO.getPageSize())
+                .collect(Collectors.toList());
+
+        // 计算总数和总页数
+        int totalCount = houseDTOList.size();
+        int totalPages = BasePageDTO.calculateTotalPages(totalCount, reqDTO.getPageSize());
+        // 创建BasePageDTO对象并设置值
+        BasePageDTO<HouseDTO> pageDTO = new BasePageDTO<>();
+        pageDTO.setTotals(totalCount);
+        pageDTO.setTotalPages(totalPages);
+        pageDTO.setList(pagedHouseDTOList);
+        return pageDTO;
+    }
+
+    /**
+     * 筛选符合价格的房源列表
+     *
+     * @param price        价格
+     * @param rentalRanges 这个城市下的房源列表
+     * @return 筛选后的房源列表
+     */
+    private boolean filterHouseByRentalRanges(Double price, List<String> rentalRanges) {
+        if (null == price) {
+            return false;
+        }
+
+        boolean isPriceInRange = false;
+        for (String rentalRange : rentalRanges) {
+            // 1800
+            // [range_1, range_3]
+            switch (rentalRange) {
+                case "range_1":
+                    isPriceInRange = price < 1000;
+                    break;
+                case "range_2":
+                    isPriceInRange = price >= 1000 && price < 1500;
+                    break;
+                case "range_3":
+                    isPriceInRange = price >= 1500 && price < 2000;
+                    break;
+                case "range_4":
+                    isPriceInRange = price >= 2000 && price < 3000;
+                    break;
+                case "range_5":
+                    isPriceInRange = price >= 3000 && price < 5000;
+                    break;
+                case "range_6":
+                    isPriceInRange = price >= 5000;
+                    break;
+                default:
+                    log.error("超出资金筛选范围, rentalRange:{}", rentalRange);
+                    break;
+            }
+            if (isPriceInRange) {
+                return true;
+            }
+        }
+        return false;
     }
 }

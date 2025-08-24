@@ -56,5 +56,4 @@ public class SearchHouseListReqDTO extends BasePageReqDTO {
      * 用户当前纬度
      */
     private Double latitude;
-
 }
