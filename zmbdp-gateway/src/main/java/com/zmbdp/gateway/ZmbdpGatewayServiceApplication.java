@@ -27,5 +27,4 @@ public class ZmbdpGatewayServiceApplication {
         SpringApplication.run(ZmbdpGatewayServiceApplication.class, args);
         log.info("网关服务启动成功......");
     }
-
 }
