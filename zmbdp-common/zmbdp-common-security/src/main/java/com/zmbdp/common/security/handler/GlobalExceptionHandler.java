@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.BindException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -61,6 +62,20 @@ public class GlobalExceptionHandler {
         return Result.fail(ResultCode.REQUEST_METNHOD_NOT_SUPPORTED.getCode(), ResultCode.REQUEST_METNHOD_NOT_SUPPORTED.getErrMsg());
     }
 
+    /**
+     * 绑定异常
+     *
+     * @param e 异常信息
+     * @param response 响应信息
+     * @return 异常结果
+     */
+    @ExceptionHandler({BindException.class})
+    public Result<?> handleBindException(BindException e, HttpServletResponse response) {
+        log.error("绑定异常",e);
+        String message = e.getAllErrors().get(0).getDefaultMessage();
+        setResponseCode(response, ResultCode.INVALID_PARA.getCode());
+        return Result.fail(ResultCode.INVALID_PARA.getCode(),message);
+    }
 
     /**
      * 类型不匹配异常
@@ -211,5 +226,4 @@ public class GlobalExceptionHandler {
         setResponseCode(response, ResultCode.ERROR.getCode());
         return Result.fail(ResultCode.ERROR.getCode(), ResultCode.ERROR.getErrMsg());
     }
-
 }

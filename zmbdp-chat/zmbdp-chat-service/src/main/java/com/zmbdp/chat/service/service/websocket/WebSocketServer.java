@@ -4,7 +4,7 @@ import com.zmbdp.chat.service.config.WebSocketConfig;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
@@ -14,7 +14,7 @@ import java.io.IOException;
  * @author 稚名不带撇
  */
 @Slf4j
-@Component
+@Service
 @ServerEndpoint(value = "/websocket", configurator = WebSocketConfig.class)
 public class WebSocketServer {
 
