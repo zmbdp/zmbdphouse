@@ -1,15 +1,9 @@
 package com.zmbdp.chat.service.config;
 
-import jakarta.websocket.HandshakeResponse;
-import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpointConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.socket.server.standard.ServerEndpointExporter;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 配置 WebSocket
