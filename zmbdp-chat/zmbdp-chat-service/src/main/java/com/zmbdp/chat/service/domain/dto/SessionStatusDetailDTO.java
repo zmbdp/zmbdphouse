@@ -54,12 +54,12 @@ public class SessionStatusDetailDTO {
      */
     public UserInfo getFromUser(Long loginUserId) {
         if (null == loginUserId) {
-            log.error("根据登录的用户id获取会话中发送方信息失败，原因：登录的用户id不存在！");
+            log.error("根据登录的用户 id 获取会话中发送方信息失败，原因：登录的用户 id 不存在！");
             return null;
         }
         if (null == user1 || null == user1.getUser()
                 || null == user2 || null == user2.getUser()) {
-            log.error("根据登录的用户id获取会话中发送方信息失败，原因：用户信息不存在！");
+            log.error("根据登录的用户 id 获取会话中发送方信息失败，原因：用户信息不存在！");
             return null;
         }
         return loginUserId.equals(user1.getUser().getUserId()) ? user1 : user2;
@@ -73,12 +73,12 @@ public class SessionStatusDetailDTO {
      */
     public UserInfo getToUser(Long loginUserId) {
         if (null == loginUserId) {
-            log.error("根据登录的用户id获取会话中发送方信息失败，原因：登录的用户id不存在！");
+            log.error("根据登录的用户 id 获取会话中发送方信息失败，原因：登录的用户 id 不存在！");
             return null;
         }
         if (null == user1 || null == user1.getUser()
                 || null == user2 || null == user2.getUser()) {
-            log.error("根据登录的用户id获取会话中发送方信息失败，原因：用户信息不存在！");
+            log.error("根据登录的用户 id 获取会话中发送方信息失败，原因：用户信息不存在！");
             return null;
         }
         return loginUserId.equals(user1.getUser().getUserId()) ? user2 : user1;
