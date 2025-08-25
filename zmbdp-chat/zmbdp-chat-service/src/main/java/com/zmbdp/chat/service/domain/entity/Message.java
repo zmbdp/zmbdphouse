@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
- * 消息
+ * 消息表
  *
  * @author 稚名不带撇
  */

@@ -5,7 +5,7 @@ import com.zmbdp.common.core.domain.entity.BaseDO;
 import lombok.Data;
 
 /**
- * 会话
+ * 会话表
  *
  * @author 稚名不带撇
  */
