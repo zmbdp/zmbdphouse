@@ -10,6 +10,7 @@ import lombok.Data;
  */
 @Data
 public class MessageVisitedReqDTO {
+
     /**
      * 会话 id
      */
