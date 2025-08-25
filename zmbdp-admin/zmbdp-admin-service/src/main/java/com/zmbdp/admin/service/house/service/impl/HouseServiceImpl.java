@@ -71,63 +71,79 @@ public class HouseServiceImpl implements IHouseService {
      * 锁 key (初始化的时候用)
      */
     private static final String HOUSE_LOCK_KEY = "house:lock";
+
+    /**
+     * 筛选策略
+     */
     @Autowired
     private final Map<String, IHouseFilter> houseFilterMap = new HashMap<>();
+
     /**
      * 房源表 mapper
      */
     @Autowired
     private HouseMapper houseMapper;
+
     /**
      * 用户表 mapper
      */
     @Autowired
     private AppUserMapper appUserMapper;
+
     /**
      * 地区表 mapper
      */
     @Autowired
     private RegionMapper regionMapper;
+
     /**
      * 标签表 mapper
      */
     @Autowired
     private TagMapper tagMapper;
+
     /**
      * 城市房源映射表 mapper
      */
     @Autowired
     private CityHouseMapper cityHouseMapper;
+
     /**
      * 房源状态表 mapper
      */
     @Autowired
     private HouseStatusMapper houseStatusMapper;
+
     /**
      * 标签房源映射表 mapper
      */
     @Autowired
     private TagHouseMapper tagHouseMapper;
+
     /**
      * 数据字典表 mapper
      */
     @Autowired
     private SysDictionaryDataMapper sysDictionaryDataMapper;
+
     /**
      * Redis 服务
      */
     @Autowired
     private RedisService redisService;
+
     /**
      * 数据字典服务
      */
     @Autowired
     private ISysDictionaryService sysDictionaryService;
+
     /**
      * 布隆过滤器服务
      */
     @Autowired
     private BloomFilterService bloomFilterService;
+
     /**
      * Redisson 分布式锁服务
      */
@@ -986,8 +1002,9 @@ public class HouseServiceImpl implements IHouseService {
 
     /**
      * 筛选数据
+     *
      * @param houseDTOList 房源列表
-     * @param reqDTO 筛选参数
+     * @param reqDTO       筛选参数
      * @return 筛选后的房源列表
      */
     private BasePageDTO<HouseDTO> filterHouseV1(List<HouseDTO> houseDTOList, SearchHouseListReqDTO reqDTO) {

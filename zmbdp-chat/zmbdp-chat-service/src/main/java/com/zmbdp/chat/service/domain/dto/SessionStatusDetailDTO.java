@@ -49,8 +49,8 @@ public class SessionStatusDetailDTO {
     /**
      * 根据当前登录用户返回发送方用户信息
      *
-     * @param loginUserId
-     * @return
+     * @param loginUserId 登录的用户id
+     * @return 会话中发送方用户信息
      */
     public UserInfo getFromUser(Long loginUserId) {
         if (null == loginUserId) {
@@ -68,8 +68,8 @@ public class SessionStatusDetailDTO {
     /**
      * 根据当前登录用户返回发送方用户信息
      *
-     * @param loginUserId
-     * @return
+     * @param loginUserId 登录的用户id
+     * @return 会话中接收方用户信息
      */
     public UserInfo getToUser(Long loginUserId) {
         if (null == loginUserId) {
@@ -86,6 +86,7 @@ public class SessionStatusDetailDTO {
 
     @Data
     public static class UserInfo {
+
         /**
          * 用户信息
          */
