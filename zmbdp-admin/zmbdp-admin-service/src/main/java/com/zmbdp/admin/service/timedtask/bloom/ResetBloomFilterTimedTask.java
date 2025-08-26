@@ -5,6 +5,7 @@ import com.zmbdp.admin.service.house.mapper.HouseMapper;
 import com.zmbdp.admin.service.user.domain.entity.AppUser;
 import com.zmbdp.admin.service.user.mapper.AppUserMapper;
 import com.zmbdp.common.bloomfilter.service.BloomFilterService;
+import com.zmbdp.common.domain.constants.BloomFilterConstants;
 import com.zmbdp.common.redis.service.RedissonLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -30,17 +31,17 @@ public class ResetBloomFilterTimedTask {
     /**
      * 用户前缀
      */
-    private static final String APP_USER_PREFIX = "app_user:";
+    private static final String APP_USER_PREFIX = BloomFilterConstants.APP_USER_PREFIX;
 
     /**
      * 用户手机号前缀
      */
-    private static final String APP_USER_PHONE_NUMBER_PREFIX = "app_user:phone_number:";
+    private static final String APP_USER_PHONE_NUMBER_PREFIX = BloomFilterConstants.APP_USER_PHONE_NUMBER_PREFIX;
 
     /**
      * 用户微信 ID 前缀
      */
-    private static final String APP_USER_OPEN_ID_PREFIX = "app_user:open_id:";
+    private static final String APP_USER_OPEN_ID_PREFIX = BloomFilterConstants.APP_USER_OPEN_ID_PREFIX;
 
     /**
      * 房源前缀
@@ -50,7 +51,7 @@ public class ResetBloomFilterTimedTask {
     /**
      * 布隆过滤器锁 key
      */
-    private static final String BLOOM_FILTER_LOCK = "bloom:filter:task:lock";
+    private static final String BLOOM_FILTER_TASK_LOCK = "bloom:filter:task:lock";
 
     /**
      * 布隆过滤器服务
@@ -95,7 +96,7 @@ public class ResetBloomFilterTimedTask {
         }
 
         // 获取锁
-        RLock lock = redissonLockService.acquire(BLOOM_FILTER_LOCK, 10, TimeUnit.SECONDS);
+        RLock lock = redissonLockService.acquire(BLOOM_FILTER_TASK_LOCK, 10, TimeUnit.SECONDS);
 
         if (null == lock) {
             log.info("刷新布隆过滤器定时任务已获取锁失败，跳过执行");
