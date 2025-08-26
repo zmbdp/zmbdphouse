@@ -199,6 +199,4 @@ public class SessionServiceImpl implements ISessionService {
         resVO.setOtherUser(sessionDTO.getToUser(loginUserId).getUser().convertToVO());
         return resVO;
     }
-
-
 }
