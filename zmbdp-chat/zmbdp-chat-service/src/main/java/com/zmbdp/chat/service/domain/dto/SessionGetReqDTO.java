@@ -16,5 +16,4 @@ public class SessionGetReqDTO {
 
     @NotNull(message = "用户2 id不能为空！")
     private Long userId2;
-
 }

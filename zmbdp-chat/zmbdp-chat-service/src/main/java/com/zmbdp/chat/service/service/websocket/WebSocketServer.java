@@ -6,6 +6,7 @@ import com.zmbdp.chat.service.config.SpringContextHolder;
 import com.zmbdp.chat.service.config.WebSocketConfig;
 import com.zmbdp.chat.service.domain.dto.WebSocketDTO;
 import com.zmbdp.chat.service.domain.enums.WebSocketDataTypeEnum;
+import com.zmbdp.chat.service.service.ChatCacheService;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.core.utils.StringUtil;
 import com.zmbdp.common.domain.domain.ResultCode;
@@ -51,6 +52,8 @@ public class WebSocketServer {
      */
     private static TokenService tokenService;
 
+    private static ChatCacheService chatCacheService;
+
     /**
      * 连接会话
      */
@@ -65,7 +68,7 @@ public class WebSocketServer {
     /**
      * 令牌服务注入<p>
      * 相当于就是说，ws 根本拿不到 spring 里面的 bean<p>
-     * 通过 @Autowired 的方法也就是让 spring 帮我们管理这个方法<p>
+     * 通过 @Autowired 的方法也就是让 spring 帮我们发现并执行这个方法，然后把这个方法的参数注入到 ws 中<p>
      * 然后 tokenService 设置为静态属性，可以共享，ws 就能拿到了
      *
      * @param tokenService 令牌服务
@@ -73,13 +76,8 @@ public class WebSocketServer {
      */
     @Autowired
     public void setTokenService(TokenService tokenService) {
-        WebSocketServer.tokenService = SpringContextHolder.getBean(TokenService.class);
+        WebSocketServer.tokenService = tokenService;
     }
-
-//    // 第二种方法，从 spring 容器中获取
-//     public TokenService getTokenService() {
-//         return SpringContextHolder.getBean(TokenService.class);
-//     }
 
     /**
      * 从 Spring 容器中获取 JwtConfig 配置<p>
@@ -99,7 +97,6 @@ public class WebSocketServer {
     @OnOpen
     public void onOpen(Session session) throws IOException {
         String secret = getJwtConfig().getSecret();
-        log.info("secret: {}", secret);
         try {
             log.info("用户连接成功");
             // 先获取 token
@@ -150,7 +147,7 @@ public class WebSocketServer {
      */
     @OnError
     public void onError(Session session, Throwable error) throws IOException {
-        log.error("websocket连接发生异常，session: {}, error: {}", session, error.toString());
+        log.error("websocket连接发生异常，session: {}, error: {}", session, String.valueOf(error));
         this.session = null;
     }
 
@@ -162,7 +159,7 @@ public class WebSocketServer {
     @OnMessage
     public void onMessage(String message) {
         try {
-            log.info("收到来自客户端的消息111：{}", message);
+            log.info("收到来自客户端的消息：{}", message);
 
             // 处理消息，JSON 转对象
             WebSocketDTO<?> webSocketDTO = JsonUtil.jsonToClass(message, WebSocketDTO.class);
@@ -203,9 +200,11 @@ public class WebSocketServer {
                 break;
             case HEART_BEAT:
                 // 处理心跳消息
+                log.info("收到心跳消息");
                 break;
             case CHAT:
                 // 处理聊天消息
+                log.info("收到聊天消息，数据：{}", JsonUtil.classToJson(data));
                 break;
             default:
                 // 未知消息类型
@@ -260,6 +259,7 @@ public class WebSocketServer {
 //@Slf4j
 //@Service
 //@RefreshScope
+//@Scope("prototype") // 每个连接都创建一个新的实例
 //@ServerEndpoint(
 //        value = "/websocket",
 //        configurator = WebSocketConfig.class,

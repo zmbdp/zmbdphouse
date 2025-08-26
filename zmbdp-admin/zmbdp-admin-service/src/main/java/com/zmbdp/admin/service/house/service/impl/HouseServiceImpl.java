@@ -26,6 +26,7 @@ import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.core.utils.StringUtil;
 import com.zmbdp.common.core.utils.TimestampUtil;
+import com.zmbdp.common.domain.constants.BloomFilterConstants;
 import com.zmbdp.common.domain.domain.ResultCode;
 import com.zmbdp.common.domain.exception.ServiceException;
 import com.zmbdp.common.redis.service.RedisService;
@@ -55,7 +56,7 @@ public class HouseServiceImpl implements IHouseService {
     /**
      * 用户前缀
      */
-    private static final String APP_USER_PREFIX = "app_user:";
+    private static final String APP_USER_PREFIX = BloomFilterConstants.APP_USER_PREFIX;
 
     /**
      * 城市房源映射锁前缀
@@ -219,8 +220,8 @@ public class HouseServiceImpl implements IHouseService {
             // 判断是否需要修改城市房源映射
             House existHouse = houseMapper.selectById(houseAddOrEditReqDTO.getHouseId());
             if (existHouse == null) {
-                log.warn("房源信息不存在; oldHouse: {}]", houseAddOrEditReqDTO.getHouseId());
-                throw new ServiceException("传递的房源id有误！", ResultCode.INVALID_PARA.getCode());
+                log.warn("房源信息不存在; oldHouse: [{}]", houseAddOrEditReqDTO.getHouseId());
+                throw new ServiceException("传递的房源 id 有误！", ResultCode.INVALID_PARA.getCode());
             }
             // 只有不相同了才修改
             if (cityHouseNeedChange(existHouse, houseAddOrEditReqDTO.getCityId())) {
