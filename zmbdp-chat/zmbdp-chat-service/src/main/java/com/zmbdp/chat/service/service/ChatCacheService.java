@@ -1,6 +1,7 @@
 package com.zmbdp.chat.service.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.zmbdp.chat.service.domain.dto.SessionStatusDetailDTO;
 import com.zmbdp.common.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,5 +75,34 @@ public class ChatCacheService {
             log.error("从缓存中获取用户下的会话列表异常，userId:{}", userId, e);
         }
         return sessionIds;
+    }
+
+    /**
+     * 缓存会话详细信息
+     *
+     * @param sessionId  会话 id
+     * @param sessionDTO 会话详细信息 DTO
+     */
+    public void cacheSessionDTO(Long sessionId, SessionStatusDetailDTO sessionDTO) {
+        try {
+            redisService.setCacheObject(CHAT_SESSION_PREFIX + sessionId, sessionDTO);
+        } catch (Exception e) {
+            log.error("缓存会话详细信息异常，sessionId:{}", sessionId, e);
+        }
+    }
+
+    /**
+     * 获取会话详细信息缓存
+     *
+     * @param sessionId 会话 id
+     * @return 会话详细信息 DTO
+     */
+    public SessionStatusDetailDTO getSessionDTOByCache(Long sessionId) {
+        try {
+            return redisService.getCacheObject(CHAT_SESSION_PREFIX + sessionId, SessionStatusDetailDTO.class);
+        } catch (Exception e) {
+            log.error("获取会话详细信息缓存时发生异常，sessionId:{}", sessionId, e);
+        }
+        return null;
     }
 }
