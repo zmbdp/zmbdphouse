@@ -17,12 +17,12 @@ public class SessionAddResVO {
     private Long sessionId;
 
     /**
-     * 登录用户
+     * 登录用户信息
      */
     private AppUserVO loginUser;
 
     /**
-     * 对方用户
+     * 对方用户信息
      */
     private AppUserVO otherUser;
 }

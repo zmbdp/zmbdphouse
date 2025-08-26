@@ -1,11 +1,12 @@
 package com.zmbdp.chat.service.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.zmbdp.chat.service.domain.dto.MessageDTO;
 import com.zmbdp.chat.service.domain.dto.SessionStatusDetailDTO;
 import com.zmbdp.common.redis.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.HashSet;
@@ -18,7 +19,7 @@ import java.util.Set;
  * @author 稚名不带撇
  */
 @Slf4j
-@Component
+@Service
 public class ChatCacheService {
 
     /**
@@ -104,5 +105,54 @@ public class ChatCacheService {
             log.error("获取会话详细信息缓存时发生异常，sessionId:{}", sessionId, e);
         }
         return null;
+    }
+
+    /**
+     * 新增会话下的消息缓存
+     *
+     * @param sessionId  会话 id
+     * @param messageDTO 消息 DTO
+     */
+    public void addMessageDOTToCache(Long sessionId, MessageDTO messageDTO) {
+        try {
+            // 会根据时间生成消息 id，所以用消息 id 作为分值来排序
+            redisService.addMemberZSet(CHAT_ZSET_SESSION_PREFIX + sessionId, messageDTO, Long.parseLong(messageDTO.getMessageId()));
+        } catch (Exception e) {
+            log.error("新增会话下的消息缓存发生异常，sessionId:{}", sessionId, e);
+        }
+    }
+
+    /**
+     * 获取会话下的聊天记录集合
+     *
+     * @param sessionId 会话 id
+     * @return 消息 DTO 集合 (注意：返回的消息列表是按时间倒序排列的)
+     */
+    public Set<MessageDTO> getMessageDTOSByCache(Long sessionId) {
+        Set<MessageDTO> messageDTOSet = new HashSet<>();
+        try {
+            messageDTOSet = redisService.getCacheZSetDesc(CHAT_ZSET_SESSION_PREFIX + sessionId, new TypeReference<LinkedHashSet<MessageDTO>>() {
+            });
+            if (CollectionUtils.isEmpty(messageDTOSet)) {
+                return new HashSet<>();
+            }
+        } catch (Exception e) {
+            log.error("获取会话下的消息列表缓存发生异常，sessionId:{}", sessionId, e);
+        }
+        return messageDTOSet;
+    }
+
+    /**
+     * 删除会话下的指定消息缓存
+     *
+     * @param sessionId 会话 id
+     * @param messageId 消息 id
+     */
+    public void removeMessageDTOCache(Long sessionId, String messageId) {
+        try {
+            redisService.removeZSetByScore(CHAT_ZSET_SESSION_PREFIX + sessionId, Long.parseLong(messageId), Long.parseLong(messageId));
+        } catch (Exception e) {
+            log.error("删除会话下的指定消息缓存发生异常，sessionId:{}, messageId:{}", sessionId, messageId, e);
+        }
     }
 }

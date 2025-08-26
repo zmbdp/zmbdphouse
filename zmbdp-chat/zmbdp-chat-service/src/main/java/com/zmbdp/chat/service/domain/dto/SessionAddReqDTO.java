@@ -24,5 +24,4 @@ public class SessionAddReqDTO implements Serializable {
      */
     @NotNull(message = "2用户id不能为空")
     private Long userId2;
-
 }
