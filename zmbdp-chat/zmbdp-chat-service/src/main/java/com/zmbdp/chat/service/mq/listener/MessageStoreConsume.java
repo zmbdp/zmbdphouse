@@ -13,6 +13,8 @@ import org.springframework.amqp.rabbit.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * 持久化聊天消息
  *
@@ -45,8 +47,8 @@ public class MessageStoreConsume {
 
     @RabbitHandler
     public void process(MessageSendReqDTO messageSendReqDTO) {
-        // 获取分布式锁
-        RLock lock =  redissonLockService.acquire(LOCK_KEY, -1);
+        // 获取分布式锁, 如果说锁存在就立即返回. 不能阻塞等待避免重复写入数据库
+        RLock lock = redissonLockService.acquire(LOCK_KEY, 0, TimeUnit.SECONDS);
         if (null == lock) {
             // 获取锁失败，跳过执行
             return;
@@ -66,9 +68,7 @@ public class MessageStoreConsume {
             log.error("消息持久化异常！messageSendReqDTO:{}", JsonUtil.classToJson(messageSendReqDTO), e);
         } finally {
             // 释放锁
-            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
-                redissonLockService.releaseLock(lock);
-            }
+            redissonLockService.releaseLock(lock);
         }
     }
 }
