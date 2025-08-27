@@ -6,6 +6,7 @@ import com.zmbdp.admin.api.appuser.domain.vo.AppUserVO;
 import com.zmbdp.admin.api.appuser.feign.AppUserApi;
 import com.zmbdp.chat.service.domain.dto.SessionAddReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionGetReqDTO;
+import com.zmbdp.chat.service.domain.dto.SessionListReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionStatusDetailDTO;
 import com.zmbdp.chat.service.domain.entity.Session;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
@@ -198,6 +199,17 @@ public class SessionServiceImpl implements ISessionService {
         resVO.setNotVisitedCount(sessionDTO.getFromUser(loginUserId).getNotVisitedCount());
         resVO.setOtherUser(sessionDTO.getToUser(loginUserId).getUser().convertToVO());
         return resVO;
+    }
+
+    /**
+     * 查询咨询会话列表
+     *
+     * @param sessionListReqDTO 会话列表查询请求参数
+     * @return 会话列表 DTO 列表
+     */
+    @Override
+    public List<SessionGetResVO> list(SessionListReqDTO sessionListReqDTO) {
+
     }
 
 

@@ -2,8 +2,11 @@ package com.zmbdp.chat.service.service;
 
 import com.zmbdp.chat.service.domain.dto.SessionAddReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionGetReqDTO;
+import com.zmbdp.chat.service.domain.dto.SessionListReqDTO;
 import com.zmbdp.chat.service.domain.vo.SessionAddResVO;
 import com.zmbdp.chat.service.domain.vo.SessionGetResVO;
+
+import java.util.List;
 
 /**
  * 会话服务接口
@@ -27,4 +30,12 @@ public interface ISessionService {
      * @return 会话信息 DTO
      */
     SessionGetResVO get(SessionGetReqDTO sessionGetReqDTO);
+
+    /**
+     * 查询咨询会话列表
+     *
+     * @param sessionListReqDTO 会话列表查询请求参数
+     * @return 会话列表 DTO 列表
+     */
+    List<SessionGetResVO> list(SessionListReqDTO sessionListReqDTO);
 }
