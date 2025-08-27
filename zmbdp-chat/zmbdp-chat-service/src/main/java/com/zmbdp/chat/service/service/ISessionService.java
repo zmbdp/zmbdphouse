@@ -2,6 +2,7 @@ package com.zmbdp.chat.service.service;
 
 import com.zmbdp.chat.service.domain.dto.SessionAddReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionGetReqDTO;
+import com.zmbdp.chat.service.domain.dto.SessionHouseReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionListReqDTO;
 import com.zmbdp.chat.service.domain.vo.SessionAddResVO;
 import com.zmbdp.chat.service.domain.vo.SessionGetResVO;
@@ -38,4 +39,12 @@ public interface ISessionService {
      * @return 会话列表 DTO 列表
      */
     List<SessionGetResVO> list(SessionListReqDTO sessionListReqDTO);
+
+    /**
+     * 查看会话下是否聊过某房源
+     *
+     * @param sessionHouseReqDTO 会话查看房源请求参数
+     * @return 是否聊过该房源
+     */
+    Boolean hasHouse(SessionHouseReqDTO sessionHouseReqDTO);
 }

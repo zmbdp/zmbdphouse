@@ -3,6 +3,7 @@ package com.zmbdp.chat.service.controller;
 
 import com.zmbdp.chat.service.domain.dto.SessionAddReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionGetReqDTO;
+import com.zmbdp.chat.service.domain.dto.SessionHouseReqDTO;
 import com.zmbdp.chat.service.domain.dto.SessionListReqDTO;
 import com.zmbdp.chat.service.domain.vo.SessionAddResVO;
 import com.zmbdp.chat.service.domain.vo.SessionGetResVO;
@@ -63,5 +64,16 @@ public class SessionController {
     @PostMapping("/list")
     public Result<List<SessionGetResVO>> list(@Validated @RequestBody SessionListReqDTO sessionListReqDTO ) {
         return Result.success(sessionService.list(sessionListReqDTO));
+    }
+
+    /**
+     * 查看会话下是否聊过某房源
+     *
+     * @param sessionHouseReqDTO 会话查看房源请求参数
+     * @return 是否聊过该房源
+     */
+    @PostMapping("/has_house")
+    public Result<Boolean> hasHouse(@Validated @RequestBody SessionHouseReqDTO sessionHouseReqDTO) {
+        return Result.success(sessionService.hasHouse(sessionHouseReqDTO));
     }
 }

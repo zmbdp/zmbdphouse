@@ -4,9 +4,12 @@ import com.zmbdp.chat.service.config.JwtConfig;
 import com.zmbdp.chat.service.config.ServerEncoder;
 import com.zmbdp.chat.service.config.SpringContextHolder;
 import com.zmbdp.chat.service.config.WebSocketConfig;
+import com.zmbdp.chat.service.domain.dto.MessageSendReqDTO;
 import com.zmbdp.chat.service.domain.dto.WebSocketDTO;
+import com.zmbdp.chat.service.domain.enums.MessageStatusEnum;
 import com.zmbdp.chat.service.domain.enums.WebSocketDataTypeEnum;
-import com.zmbdp.chat.service.service.ChatCacheService;
+import com.zmbdp.chat.service.mq.sender.MessageProduce;
+import com.zmbdp.chat.service.service.SnowflakeIdService;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.core.utils.StringUtil;
 import com.zmbdp.common.domain.domain.ResultCode;
@@ -52,7 +55,15 @@ public class WebSocketServer {
      */
     private static TokenService tokenService;
 
-    private static ChatCacheService chatCacheService;
+    /**
+     * 消息生产者服务
+     */
+    private static MessageProduce messageProduce;
+
+    /**
+     * 雪花 ID 生成器
+     */
+    private static SnowflakeIdService snowflakeIdService;
 
     /**
      * 连接会话
@@ -77,6 +88,16 @@ public class WebSocketServer {
     @Autowired
     public void setTokenService(TokenService tokenService) {
         WebSocketServer.tokenService = tokenService;
+    }
+
+    @Autowired
+    public void setSnowflakeIdService(SnowflakeIdService snowflakeIdService) {
+        WebSocketServer.snowflakeIdService = snowflakeIdService;
+    }
+
+    @Autowired
+    public void setMessageProduce(MessageProduce messageProduce) {
+        WebSocketServer.messageProduce = messageProduce;
     }
 
     /**
@@ -117,7 +138,6 @@ public class WebSocketServer {
 
             // 加入 webSocketMap 管理，方便其他服务器拿取数据
             webSocketMap.put(this.userId, this);
-//            log.info("webSocketMap: {}", JsonUtil.classToJson(webSocketMap));
             log.info("用户 [{}] 已经连接", userId);
         } catch (Exception e) {
             log.error("用户连接失败：{}; 即将关闭连接", e.toString());
@@ -130,7 +150,6 @@ public class WebSocketServer {
      */
     @OnClose
     public void onClose() throws IOException {
-//        log.info("用户退出");
         if (userId != null && webSocketMap.containsKey(userId)) {
             webSocketMap.remove(userId);
         }
@@ -168,12 +187,7 @@ public class WebSocketServer {
                 return;
             }
 
-            // 模拟业务处理
             handleMessage(webSocketDTO.getType(), webSocketDTO.getData());
-
-//            Thread.sleep(3000);
-//            log.info("收到来自客户端的消息：{}", message);
-//            this.session.getBasicRemote().sendText("消息已收到: " + message);
         } catch (Exception e) {
             log.error("发送消息异常：{}", e.toString());
         }
@@ -200,11 +214,11 @@ public class WebSocketServer {
                 break;
             case HEART_BEAT:
                 // 处理心跳消息
-                log.info("收到心跳消息");
+                handleHeartBeatMessage();
                 break;
             case CHAT:
                 // 处理聊天消息
-                log.info("收到聊天消息，数据：{}", JsonUtil.classToJson(data));
+                handleChatMessage(String.valueOf(data));
                 break;
             default:
                 // 未知消息类型
@@ -229,6 +243,43 @@ public class WebSocketServer {
     }
 
     /**
+     * 处理心跳消息
+     */
+    private void handleHeartBeatMessage() {
+        try {
+            log.info("收到心跳消息");
+            sendMessage(new WebSocketDTO<>(WebSocketDataTypeEnum.HEART_BEAT.getType(), "pong"));
+        } catch (Exception e) {
+            log.error("处理心跳消息异常：{}", e.toString());
+        }
+    }
+
+
+    /**
+     * 处理聊天消息
+     *
+     * @param data 消息内容
+     */
+    private void handleChatMessage(String data) {
+        try {
+            // 反序列化成咨询聊天消息
+            MessageSendReqDTO messageSendReqDTO = JsonUtil.jsonToClass(data, MessageSendReqDTO.class);
+            if (null == messageSendReqDTO) {
+                throw new ServiceException("聊天消息为空！");
+            }
+
+            // 广播咨询聊天消息
+            messageSendReqDTO.setMessageId(snowflakeIdService.nextId());
+            messageSendReqDTO.setStatus(MessageStatusEnum.MESSAGE_UNREAD.getCode());
+            messageSendReqDTO.setVisited(MessageStatusEnum.MESSAGE_NOT_VISITED.getCode());
+            messageProduce.sendMessage(messageSendReqDTO);
+
+        } catch (Exception e) {
+            log.error("生产者发送消息异常，data:{}", data, e);
+        }
+    }
+
+    /**
      * 处理未知消息类型
      *
      * @param type 消息数据
@@ -248,6 +299,21 @@ public class WebSocketServer {
         } catch (Exception e) {
             log.error("ws 推送消息失败！webSocketDTO：{}", JsonUtil.classToJson(webSocketDTO), e);
         }
+    }
+
+    /**
+     * 给指定用户推送消息（这里的用户是当前服务器自己管理的 session）
+     *
+     * @param userId 用户 ID
+     * @param webSocketDTO 消息数据
+     */
+    public static void sendMessage(Long userId, WebSocketDTO<?> webSocketDTO) {
+        if (!webSocketMap.containsKey(userId)) {
+            // 无法推送，丢弃
+            return;
+        }
+        webSocketMap.get(userId).sendMessage(webSocketDTO);
+        log.info("消息转发成功:{}", JsonUtil.classToJson(webSocketDTO));
     }
 }
 
