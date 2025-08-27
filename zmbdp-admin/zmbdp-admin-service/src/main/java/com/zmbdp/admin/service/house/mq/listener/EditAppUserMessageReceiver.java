@@ -1,4 +1,4 @@
-package com.zmbdp.admin.service.house.listener;
+package com.zmbdp.admin.service.house.mq.listener;
 
 import com.zmbdp.admin.api.appuser.domain.dto.AppUserDTO;
 import com.zmbdp.admin.service.house.service.IHouseService;
@@ -16,12 +16,21 @@ import java.util.List;
 @Component
 @RabbitListener(bindings = {@QueueBinding(
         value = @Queue(), // 不指定生成匿名队列，这么做不需要担心冲突，并且没人连接队列会自动删除
-        exchange = @Exchange(value = RabbitConfig.EXCHANGE_NAME, type = ExchangeTypes.FANOUT))
-})
+        exchange = @Exchange(value = RabbitConfig.EXCHANGE_NAME, type = ExchangeTypes.FANOUT)
+)})
 public class EditAppUserMessageReceiver {
+
+    /**
+     * 房源服务
+     */
     @Autowired
     private IHouseService houseService;
 
+    /**
+     * 处理用户更新消息
+     *
+     * @param appUserDTO 用户信息
+     */
     @RabbitHandler
     public void process(AppUserDTO appUserDTO) {
         if (null == appUserDTO || null == appUserDTO.getUserId()) {
@@ -32,17 +41,15 @@ public class EditAppUserMessageReceiver {
         log.info("MQ成功接收到消息，message:{}", JsonUtil.classToJson(appUserDTO));
 
         try {
-            // 1. 获取用户下房源 id 列表
+            // 获取用户下房源 id 列表
             List<Long> houseIds = houseService.listByUserId(appUserDTO.getUserId());
 
-            // 2. 更新用户下全量房源列表的缓存
+            // 新用户下全量房源列表的缓存
             for (Long houseId : houseIds) {
                 houseService.cacheHouse(houseId);
             }
         } catch (Exception e) {
             log.error("处理用户更新时，更新房源缓存异常，appUserDTO:{}", JsonUtil.classToJson(appUserDTO), e);
         }
-
     }
-
 }

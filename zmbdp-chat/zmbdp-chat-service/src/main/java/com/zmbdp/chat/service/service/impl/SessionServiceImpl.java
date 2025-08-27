@@ -4,10 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zmbdp.admin.api.appuser.domain.dto.AppUserDTO;
 import com.zmbdp.admin.api.appuser.domain.vo.AppUserVO;
 import com.zmbdp.admin.api.appuser.feign.AppUserApi;
-import com.zmbdp.chat.service.domain.dto.SessionAddReqDTO;
-import com.zmbdp.chat.service.domain.dto.SessionGetReqDTO;
-import com.zmbdp.chat.service.domain.dto.SessionListReqDTO;
-import com.zmbdp.chat.service.domain.dto.SessionStatusDetailDTO;
+import com.zmbdp.admin.api.house.domain.vo.HouseDetailVO;
+import com.zmbdp.admin.api.house.feign.HouseServiceApi;
+import com.zmbdp.chat.service.domain.dto.*;
 import com.zmbdp.chat.service.domain.entity.Session;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
 import com.zmbdp.chat.service.domain.vo.SessionAddResVO;
@@ -19,9 +18,11 @@ import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.domain.domain.Result;
 import com.zmbdp.common.domain.domain.ResultCode;
 import com.zmbdp.common.domain.exception.ServiceException;
+import com.zmbdp.common.redis.service.RedisService;
 import com.zmbdp.common.security.domain.dto.LoginUserDTO;
 import com.zmbdp.common.security.service.TokenService;
-import org.apache.commons.collections4.CollectionUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
  *
  * @author 稚名不带撇
  */
+@Slf4j
 @Service
 @RefreshScope
 public class SessionServiceImpl implements ISessionService {
@@ -68,10 +71,22 @@ public class SessionServiceImpl implements ISessionService {
     private AppUserApi appUserApi;
 
     /**
+     * 房源服务远程调用接口
+     */
+    @Autowired
+    private HouseServiceApi houseServiceApi;
+
+    /**
      * JWT 密钥
      */
     @Value("${jwt.token.secret}")
     private String secret;
+
+    /**
+     * redis 服务
+     */
+    @Autowired
+    private RedisService redisService;
 
     /**
      * 新建咨询会话
@@ -209,8 +224,62 @@ public class SessionServiceImpl implements ISessionService {
      */
     @Override
     public List<SessionGetResVO> list(SessionListReqDTO sessionListReqDTO) {
-
+        // 获取当前登录用户 id
+        Long loginUserId = tokenService.getLoginUser(secret).getUserId();
+        // 先从 redis 中获取当前用户下的会话列表
+        Set<Long> sessionIds = chatCacheService.getUserSessionsByCache(loginUserId);
+        if (CollectionUtils.isEmpty(sessionIds)) {
+            return List.of();
+        }
+        // 这时候已经拿到了查询会话状态详情，并构造结果
+        return sessionIds.stream()
+                // 先查会话详情
+                .map(sessionId -> chatCacheService.getSessionDTOByCache(sessionId))
+                // 查出来之后过滤掉空的和没有最后消息的，因为没有最后消息就说明没聊过天
+                .filter(sessionDTO -> sessionDTO != null && sessionDTO.getLastMessageDTO() != null)
+                // 然后拷贝属性返回
+                .map(sessionDTO -> {
+                    SessionGetResVO sessionGetResVO = new SessionGetResVO();
+                    sessionGetResVO.setSessionId(sessionDTO.getSessionId());
+                    MessageVO lastMessageVO = new MessageVO();
+                    BeanCopyUtil.copyProperties(sessionDTO.getLastMessageDTO(), lastMessageVO);
+                    sessionGetResVO.setLastMessageVO(lastMessageVO);
+                    sessionGetResVO.setLastSessionTime(sessionDTO.getLastSessionTime());
+                    sessionGetResVO.setNotVisitedCount(
+                            sessionDTO.getFromUser(loginUserId).getNotVisitedCount());
+                    sessionGetResVO.setOtherUser(
+                            sessionDTO.getToUser(loginUserId).getUser().convertToVO());
+                    return sessionGetResVO;
+                }).toList();
     }
 
+    /**
+     * 查看会话下是否聊过某房源
+     *
+     * @param sessionHouseReqDTO 会话查看房源请求参数
+     * @return 是否聊过该房源
+     */
+    @Override
+    public Boolean hasHouse(SessionHouseReqDTO sessionHouseReqDTO) {
+        // 从 redis 中拿出会话详细信息，里面存着有聊过的房源 id 列表
+        SessionStatusDetailDTO sessionDTO = chatCacheService.getSessionDTOByCache(sessionHouseReqDTO.getSessionId());
+        if (null == sessionDTO) {
+            throw new ServiceException("会话 id 有误，不存在其会话信息！");
+        }
 
+        // 判断前端房源 id 是否存在
+        Result<HouseDetailVO> detail = houseServiceApi.detail(sessionHouseReqDTO.getHouseId());
+        if (null == detail || detail.getCode() != ResultCode.SUCCESS.getCode() || null == detail.getData()) {
+            log.warn("要查询的房源不存在，houseId: " + sessionHouseReqDTO.getHouseId());
+            return false;
+        }
+
+        // 然后拿出前端传入的房源 id 列表
+        Set<Long> houseIds = sessionDTO.getHouseIds();
+        if (CollectionUtils.isEmpty(houseIds)) {
+            return false;
+        }
+        // 最后判断传入的房源 id 是否在聊过的房源 id 列表中
+        return houseIds.contains(sessionHouseReqDTO.getHouseId());
+    }
 }
