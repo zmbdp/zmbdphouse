@@ -308,6 +308,8 @@ public class WebSocketServer {
      * @param webSocketDTO 消息数据
      */
     public static void sendMessage(Long userId, WebSocketDTO<?> webSocketDTO) {
+        // 每个用户登录之后，都会创建一个新的 WebSocketServer 实例，并存放在 webSocketMap 中
+        // 如果说 webSocket Map 中没有这个用户的实例，说明这个用户不在当前服务器上登录，则无法推送消息
         if (!webSocketMap.containsKey(userId)) {
             // 无法推送，丢弃
             return;
