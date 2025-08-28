@@ -3,6 +3,7 @@ package com.zmbdp.chat.service.mq.listener;
 
 import com.zmbdp.chat.service.config.RabbitMqConfig;
 import com.zmbdp.chat.service.domain.dto.MessageSendReqDTO;
+import com.zmbdp.chat.service.service.IMessageService;
 import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.domain.exception.ServiceException;
 import com.zmbdp.common.redis.service.RedissonLockService;
