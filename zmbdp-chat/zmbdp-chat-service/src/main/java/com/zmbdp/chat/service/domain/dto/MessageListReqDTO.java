@@ -14,9 +14,15 @@ import java.io.Serializable;
 @Data
 public class MessageListReqDTO implements Serializable {
 
+    /**
+     * 会话ID
+     */
     @NotNull(message = "会话ID不能为空")
     private Long sessionId;
 
+    /**
+     * 最后一条消息ID
+     */
     @NotBlank(message = "最后一条消息ID不能为空")
     private String lastMessageId;
 
@@ -26,7 +32,7 @@ public class MessageListReqDTO implements Serializable {
     private Integer count = 10;
 
     /**
-     * 是否获取当前消息id内容
+     * 是否获取当前消息 id 内容
      */
     private Boolean needCurMessage = false;
 }
