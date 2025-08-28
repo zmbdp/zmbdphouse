@@ -14,8 +14,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @Data
-@Configuration
 @RefreshScope
+@Configuration
 @ConfigurationProperties(prefix = "oss")
 @ConditionalOnProperty(value = "storage.type", havingValue = "oss")
 // 当括号中条件成立时，微服务启动的时候就会加载当前类。
