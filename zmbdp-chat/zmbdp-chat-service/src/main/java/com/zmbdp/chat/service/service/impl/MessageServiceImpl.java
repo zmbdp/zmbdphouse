@@ -1,10 +1,8 @@
 package com.zmbdp.chat.service.service.impl;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.zmbdp.chat.service.domain.dto.MessageDTO;
-import com.zmbdp.chat.service.domain.dto.MessageListReqDTO;
-import com.zmbdp.chat.service.domain.dto.MessageSendReqDTO;
-import com.zmbdp.chat.service.domain.dto.SessionStatusDetailDTO;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.zmbdp.chat.service.domain.dto.*;
 import com.zmbdp.chat.service.domain.entity.Message;
 import com.zmbdp.chat.service.domain.entity.Session;
 import com.zmbdp.chat.service.domain.enums.MessageStatusEnum;
@@ -17,8 +15,11 @@ import com.zmbdp.chat.service.service.IMessageService;
 import com.zmbdp.chat.service.service.SnowflakeIdService;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
 import com.zmbdp.common.core.utils.StringUtil;
+import com.zmbdp.common.security.service.TokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -34,6 +35,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
+@RefreshScope
 public class MessageServiceImpl implements IMessageService {
 
     /**
@@ -59,6 +61,18 @@ public class MessageServiceImpl implements IMessageService {
      */
     @Autowired
     private ChatCacheService chatCacheService;
+
+    /**
+     * token 服务
+     */
+    @Autowired
+    private TokenService tokenService;
+
+    /**
+     * jwt 密钥
+     */
+    @Value("${jwt.token.secret}")
+    private String secret;
 
     /**
      * 根据消息 id 获取消息信息
@@ -207,5 +221,50 @@ public class MessageServiceImpl implements IMessageService {
         // 需要逆置
         Collections.reverse(resultList);
         return resultList;
+    }
+
+    /**
+     * 批量更新消息访问状态
+     *
+     * @param reqDTO 更新消息访问状态 DTO
+     */
+    @Override
+    public void batchVisited(MessageVisitedReqDTO reqDTO) {
+        // 查询对方用户 id
+        Long loginUserId = tokenService.getLoginUser(secret).getUserId();
+        Session session = sessionMapper.selectById(reqDTO.getSessionId());
+        Long otherUserId = loginUserId.equals(session.getUserId1()) ? session.getUserId2() : session.getUserId1();
+
+        // 修改对方用户消息的访问状态（Mysql）
+        messageMapper.update(null, new LambdaUpdateWrapper<Message>()
+                .eq(Message::getSessionId, reqDTO.getSessionId())
+                .eq(Message::getFromId, otherUserId)
+                .eq(Message::getVisited, MessageStatusEnum.MESSAGE_NOT_VISITED.getCode())
+                .set(Message::getVisited, MessageStatusEnum.MESSAGE_VISITED.getCode())
+        );
+
+        // 修改对方用户消息的访问状态 （Redis）
+        // 会话-消息列表
+        Set<MessageDTO> messageDTOS = chatCacheService.getMessageDTOSByCache(reqDTO.getSessionId());
+        if (CollectionUtils.isEmpty(messageDTOS)) {
+            return;
+        }
+        // 遍历所有的消息，更新未浏览状态为已浏览
+        for (MessageDTO messageDTO : messageDTOS) {
+            // 自己的消息不处理
+            if (messageDTO.getFromId().equals(loginUserId)) {
+                continue;
+            }
+
+            // 当遍历到的消息为已浏览，说明以前的消息都时已浏览，直接 break 就行了
+            if (MessageStatusEnum.MESSAGE_VISITED.getCode().equals(messageDTO.getVisited())) {
+                break;
+            }
+
+            // 需要更新浏览状态,先删除再新增
+            messageDTO.setVisited(MessageStatusEnum.MESSAGE_VISITED.getCode());
+            chatCacheService.removeMessageDTOCache(messageDTO.getSessionId(), messageDTO.getMessageId());
+            chatCacheService.addMessageDOTToCache(messageDTO.getSessionId(), messageDTO);
+        }
     }
 }

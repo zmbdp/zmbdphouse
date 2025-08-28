@@ -1,6 +1,7 @@
 package com.zmbdp.chat.service.controller;
 
 import com.zmbdp.chat.service.domain.dto.MessageListReqDTO;
+import com.zmbdp.chat.service.domain.dto.MessageVisitedReqDTO;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
 import com.zmbdp.chat.service.service.IMessageService;
 import com.zmbdp.common.domain.domain.Result;
@@ -37,5 +38,17 @@ public class MessageController {
     @PostMapping("/list")
     public Result<List<MessageVO>> list(@Validated @RequestBody MessageListReqDTO messageListReqDTO) {
         return Result.success(messageService.list(messageListReqDTO));
+    }
+
+    /**
+     * 更新消息访问状态
+     *
+     * @param messageVisitedReqDTO 更新消息访问状态 DTO
+     * @return 统一结果
+     */
+    @PostMapping("/batch_visited")
+    public Result<?> batchVisited(@Validated @RequestBody MessageVisitedReqDTO messageVisitedReqDTO) {
+        messageService.batchVisited(messageVisitedReqDTO);
+        return Result.success();
     }
 }
