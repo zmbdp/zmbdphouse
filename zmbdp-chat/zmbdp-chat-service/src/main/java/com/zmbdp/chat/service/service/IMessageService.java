@@ -3,6 +3,7 @@ package com.zmbdp.chat.service.service;
 import com.zmbdp.chat.service.domain.dto.MessageDTO;
 import com.zmbdp.chat.service.domain.dto.MessageListReqDTO;
 import com.zmbdp.chat.service.domain.dto.MessageSendReqDTO;
+import com.zmbdp.chat.service.domain.dto.MessageVisitedReqDTO;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
 
 import java.util.List;
@@ -37,4 +38,11 @@ public interface IMessageService {
      * @return 消息列表
      */
     List<MessageVO> list(MessageListReqDTO messageListReqDTO);
+
+    /**
+     * 批量更新消息访问状态
+     *
+     * @param reqDTO 更新消息访问状态 DTO
+     */
+    void batchVisited(MessageVisitedReqDTO reqDTO);
 }
