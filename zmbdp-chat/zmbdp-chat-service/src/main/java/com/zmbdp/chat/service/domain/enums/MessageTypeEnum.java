@@ -19,8 +19,9 @@ public enum MessageTypeEnum {
 
     MESSAGE_MP4(3, "视频"),
 
-    MESSAGE_CARD(4, "卡片");
+    MESSAGE_CARD(4, "卡片")
 
+    ;
 
     private final Integer code;
 
