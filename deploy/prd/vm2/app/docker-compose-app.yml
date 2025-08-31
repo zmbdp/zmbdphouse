@@ -53,5 +53,18 @@ services:
       JAVA_OPTS: -Xmx256m -Dspring.cloud.nacos.discovery.ip=你的云服务器2内网ip/你的虚拟机2内网ip
     networks:
       zmbdphouse_network_prd:
+  zmbdphouse-chat:
+    build:
+      context: service/chat
+    ports:
+      - "18084:18084"
+    image: zmbdphouseprd/zmbdp-chat-service:1.0-SNAPSHOT
+    container_name: zmbdphouse-chat-prd
+    environment:
+      RUN_ENV: prd
+      NACOS_ADDR: 你的云服务器1内网ip/你的虚拟机1内网ip:你的云服务器1内网ip/你的虚拟机1内网ip:8856,你的云服务器2内网ip/你的虚拟机3内网ip:8858
+      JAVA_OPTS: -Xmx256m -Dspring.cloud.nacos.discovery.ip=你的云服务器1内网ip/你的虚拟机1内网
+    networks:
+      zmbdphouse_network_prd:
 networks:
   zmbdphouse_network_prd:

@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 消息服务接口实现类
@@ -233,6 +234,7 @@ public class MessageServiceImpl implements IMessageService {
         // 查询对方用户 id
         Long loginUserId = tokenService.getLoginUser(secret).getUserId();
         Session session = sessionMapper.selectById(reqDTO.getSessionId());
+        // 当前登录用户的 id 是自己，判断哪个 id 不相等哪个就是对方的，要把会话消息列表中，对方消息下面的状态改成已读
         Long otherUserId = loginUserId.equals(session.getUserId1()) ? session.getUserId2() : session.getUserId1();
 
         // 修改对方用户消息的访问状态（Mysql）
@@ -266,5 +268,56 @@ public class MessageServiceImpl implements IMessageService {
             chatCacheService.removeMessageDTOCache(messageDTO.getSessionId(), messageDTO.getMessageId());
             chatCacheService.addMessageDOTToCache(messageDTO.getSessionId(), messageDTO);
         }
+        // 修改会话详情缓存:
+        // 1. 登录用户记录的对方消息未浏览数
+        // 2. 最后一条聊天消息（访问状态）
+        SessionStatusDetailDTO sessionDTO = chatCacheService.getSessionDTOByCache(reqDTO.getSessionId());
+        SessionStatusDetailDTO.UserInfo userInfo = sessionDTO.getFromUser(loginUserId);
+        userInfo.setNotVisitedCount(0);
+        sessionDTO.setLastMessageDTO(messageDTOS.iterator().next());
+        chatCacheService.cacheSessionDTO(sessionDTO.getSessionId(), sessionDTO);
+    }
+
+    /**
+     * 更新消息已读状态（目前只有语音）
+     *
+     * @param reqDTO 更新消息已读状态 DTO
+     */
+    @Override
+    public void batchRead(MessageReadReqDTO reqDTO) {
+        // 修改 MySql
+        List<Long> messageIds = reqDTO.getMessageIds().stream()
+                .map(Long::valueOf)
+                .toList();
+        messageMapper.update(null, new LambdaUpdateWrapper<Message>()
+                .in(Message::getId, messageIds)
+                .set(Message::getStatus, MessageStatusEnum.MESSAGE_READ.getCode())
+        );
+
+        // 修改 Redis
+        Set<MessageDTO> messageDTOS = chatCacheService.getMessageDTOSByCache(reqDTO.getSessionId());
+        if (CollectionUtils.isEmpty(messageDTOS)) {
+            return;
+        }
+
+        int count = reqDTO.getMessageIds().size();
+        for (MessageDTO messageDTO : messageDTOS) {
+            if (reqDTO.getMessageIds().contains(messageDTO.getMessageId())) {
+                messageDTO.setStatus(MessageStatusEnum.MESSAGE_READ.getCode());
+                chatCacheService.removeMessageDTOCache(messageDTO.getSessionId(), messageDTO.getMessageId());
+                chatCacheService.addMessageDOTToCache(messageDTO.getSessionId(), messageDTO);
+                count--;
+            }
+            if (count <= 0) {
+                break;
+            }
+        }
+
+        // 修改会话详情缓存:
+        // 1. 登录用户记录的对方消息未浏览数
+        // 2. 最后一条聊天消息（访问状态）
+        SessionStatusDetailDTO sessionDTO = chatCacheService.getSessionDTOByCache(reqDTO.getSessionId());
+        sessionDTO.setLastMessageDTO(messageDTOS.iterator().next());
+        chatCacheService.cacheSessionDTO(sessionDTO.getSessionId(), sessionDTO);
     }
 }
