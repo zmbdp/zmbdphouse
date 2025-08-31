@@ -62,8 +62,8 @@ services:
     container_name: zmbdphouse-chat-prd
     environment:
       RUN_ENV: prd
-      NACOS_ADDR: 192.168.100.233:8854,192.168.100.233:8856,192.168.100.235:8858
-      JAVA_OPTS: -Xmx256m -Dspring.cloud.nacos.discovery.ip=192.168.100.233
+      NACOS_ADDR: 你的云服务器1内网ip/你的虚拟机1内网ip:8854,你的云服务器1内网ip/你的虚拟机1内网ip:8856,你的云服务器2内网ip/你的虚拟机2内网ip:8858
+      JAVA_OPTS: -Xmx256m -Dspring.cloud.nacos.discovery.ip=你的云服务器1内网ip/你的虚拟机1内网ip
     networks:
       zmbdphouse_network_prd:
 networks:
