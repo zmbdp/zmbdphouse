@@ -88,12 +88,12 @@ public class MapServiceImpl implements IMapService {
             // 1 直接先查数据库
             List<SysRegion> cityList = regionMapper.selectAllRegion();
             // 2 在服务启动期间，缓存城市列表
-            loadCityInfo(cityList);
+            int cacheSize = loadCityInfo(cityList);
             // 3 在服务启动期间，缓存城市归类列表
             loadCityPinyinInfo(cityList);
             // 4 在服务启动期间，缓存城市热点列表
             loadCityHotListInfo(cityList);
-            log.info("缓存预热完成，一共有 {} 个城市", cityList.size());
+            log.info("缓存预热完成，一共有 {} 个城市", cacheSize);
         } catch (Exception e) {
             log.error("城市缓存预热失败：{}", e.getMessage(), e);
         } finally {
@@ -106,10 +106,20 @@ public class MapServiceImpl implements IMapService {
      *
      * @param cityList 城市列表
      */
-    private void loadCityInfo(List<SysRegion> cityList) {
-        // 先对象转换城 DTO
-        List<SysRegionDTO> result = BeanCopyUtil.copyListProperties(cityList, SysRegionDTO::new);
+    private int loadCityInfo(List<SysRegion> cityList) {
+        // 查询区域信息
+        List<SysRegionDTO> result = new ArrayList<>();
+        // 对象转换
+        for (SysRegion sysRegion : cityList) {
+            if (sysRegion.getLevel().equals(MapConstants.CITY_LEVEL)) {
+                SysRegionDTO sysRegionDTO = new SysRegionDTO();
+                BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
+                result.add(sysRegionDTO);
+            }
+        }
+        // 设置缓存
         CacheUtil.setL2Cache(redisService, MapConstants.CACHE_MAP_CITY_KEY, result, caffeineCache, 120L, TimeUnit.MINUTES);
+        return result.size();
     }
 
     /**
@@ -173,7 +183,7 @@ public class MapServiceImpl implements IMapService {
     public List<SysRegionDTO> getCityListV1() {
         // 继续优化，使用看门狗分布式锁来确定只有一个线程需要查数据库
         // 先获取到一把锁
-        RLock lock = redissonLockService.acquire(MapConstants.CACHE_MAP_CITY_KEY, 3, TimeUnit.SECONDS);// 加锁
+        RLock lock = redissonLockService.acquire(MapConstants.CACHE_MAP_CITY_KEY, 3, TimeUnit.SECONDS); // 加锁
         // 如果说未获取到锁，那就返回空
         if (null == lock) {
             return CacheUtil.getL2Cache(redisService, MapConstants.CACHE_MAP_CITY_KEY, new TypeReference<List<SysRegionDTO>>() {
@@ -187,7 +197,16 @@ public class MapServiceImpl implements IMapService {
                 return resultDTO;
             }
             // 查数据库
-            List<SysRegion> list = regionMapper.selectAllRegion();
+            List<SysRegion> tmoList = regionMapper.selectAllRegion();
+            List<SysRegion> list = new ArrayList<>();
+            for (SysRegion sysRegion : tmoList) {
+                if (sysRegion.getLevel().equals(MapConstants.CITY_LEVEL)) {
+                    list.add(sysRegion);
+                }
+            }
+            if (list.isEmpty()) {
+                return null;
+            }
             // 拷贝成 dto 返回
             resultDTO = BeanCopyUtil.copyListProperties(list, SysRegionDTO::new);
             // 然后再存储到缓存中

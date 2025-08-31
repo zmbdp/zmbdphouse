@@ -1,6 +1,7 @@
 package com.zmbdp.chat.service.controller;
 
 import com.zmbdp.chat.service.domain.dto.MessageListReqDTO;
+import com.zmbdp.chat.service.domain.dto.MessageReadReqDTO;
 import com.zmbdp.chat.service.domain.dto.MessageVisitedReqDTO;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
 import com.zmbdp.chat.service.service.IMessageService;
@@ -51,4 +52,17 @@ public class MessageController {
         messageService.batchVisited(messageVisitedReqDTO);
         return Result.success();
     }
+
+    /**
+     * 更新消息已读状态（目前只有语音）
+     *
+     * @param messageReadReqDTO 更新消息已读状态 DTO
+     * @return 统一结果
+     */
+    @PostMapping("/batch_read")
+    public Result<?> batchRead(@Validated @RequestBody MessageReadReqDTO messageReadReqDTO) {
+        messageService.batchRead(messageReadReqDTO);
+        return Result.success();
+    }
+
 }

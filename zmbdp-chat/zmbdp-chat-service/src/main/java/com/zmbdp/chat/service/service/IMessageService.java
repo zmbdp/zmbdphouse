@@ -1,9 +1,6 @@
 package com.zmbdp.chat.service.service;
 
-import com.zmbdp.chat.service.domain.dto.MessageDTO;
-import com.zmbdp.chat.service.domain.dto.MessageListReqDTO;
-import com.zmbdp.chat.service.domain.dto.MessageSendReqDTO;
-import com.zmbdp.chat.service.domain.dto.MessageVisitedReqDTO;
+import com.zmbdp.chat.service.domain.dto.*;
 import com.zmbdp.chat.service.domain.vo.MessageVO;
 
 import java.util.List;
@@ -45,4 +42,11 @@ public interface IMessageService {
      * @param reqDTO 更新消息访问状态 DTO
      */
     void batchVisited(MessageVisitedReqDTO reqDTO);
+
+    /**
+     * 更新消息已读状态（目前只有语音）
+     *
+     * @param messageReadReqDTO 更新消息已读状态 DTO
+     */
+    void batchRead(MessageReadReqDTO reqDTO);
 }
