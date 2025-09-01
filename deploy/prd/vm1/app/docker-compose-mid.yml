@@ -110,13 +110,13 @@ services:
       - JVM_XMN=256m
       - NACOS_APPLICATION_PORT=8854
       - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=你的云服务器1内网ip/你的虚拟机1内网ip
+      - MYSQL_SERVICE_HOST=10.0.16.13
       - MYSQL_SERVICE_PORT=3308
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
       - MYSQL_SERVICE_PASSWORD=Hf@173503494
-      - NACOS_SERVER_IP=你的云服务器1内网ip/你的虚拟机1内网ip
-      - NACOS_SERVERS=你的云服务器1内网ip/你的虚拟机1内网ip:8854 你的云服务器1内网ip/你的虚拟机1内网ip:8856 你的云服务器2内网ip/你的虚拟机2内网ip:8858
+      - NACOS_SERVER_IP=10.0.16.13
+      - NACOS_SERVERS=10.0.16.13:8854 10.0.16.13:8856 10.0.16.17:8858
     volumes:
       - ../data/zmbdphousedata/nacos01/logs/:/home/nacos/logs
       - ../data/zmbdphousedata/nacos01/tomcatlogs/:/home/bit/nacos/tomcat/logs/
@@ -147,13 +147,13 @@ services:
       - JVM_XMN=256m
       - NACOS_APPLICATION_PORT=8856
       - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=你的云服务器1内网ip/你的虚拟机1内网ip
+      - MYSQL_SERVICE_HOST=10.0.16.13
       - MYSQL_SERVICE_PORT=3308
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
       - MYSQL_SERVICE_PASSWORD=Hf@173503494
-      - NACOS_SERVER_IP=你的云服务器1内网ip/你的虚拟机1内网ip
-      - NACOS_SERVERS=你的云服务器1内网ip/你的虚拟机1内网ip:8854 你的云服务器1内网ip/你的虚拟机1内网ip:8856 你的云服务器2内网ip/你的虚拟机2内网ip:8858
+      - NACOS_SERVER_IP=10.0.16.13
+      - NACOS_SERVERS=10.0.16.13:8854 10.0.16.13:8856 10.0.16.17:8858
     volumes:
       - ../data/zmbdphousedata/nacos02/logs/:/home/nacos/logs
       - ../data/zmbdphousedata/nacos02/tomcatlogs/:/home/bit/nacos/tomcat/logs/
@@ -180,7 +180,7 @@ services:
     restart: always
     hostname: zmbdphouse-rabbitmq01
     extra_hosts:
-      - "zmbdphouse-rabbitmq02:你的云服务器2内网ip/你的虚拟机2内网ip"
+      - "zmbdphouse-rabbitmq02:10.0.16.17"
     environment:
       RABBITMQ_ERLANG_COOKIE: 'BITECOOKIE'
       RABBITMQ_NODE_PORT: 5673
