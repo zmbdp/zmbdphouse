@@ -4611,3 +4611,169 @@ INSERT INTO sys_user (nick_name, phone_number, password, `identity`, remark, sta
 VALUES ('稚名不带撇', '62a9bfed8dc2cc6e2c83eb628bd10d3e', '78199ef620f359d5a33b91d172d3acfeb13591719c53d3cfa14ade0614fcb1a6',
         'super_admin', NULL, 'enable');
 commit;
+
+use zmbdphouse_test;
+drop table if exists `session`;
+CREATE TABLE `session`  (
+                            `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+                            `user_id1` bigint(20) NOT NULL COMMENT '用户1',
+                            `user_id2` bigint(20) NOT NULL COMMENT '用户2',
+                            PRIMARY KEY (`id`) USING BTREE,
+                            UNIQUE INDEX `uk_session`(`user_id1`, `user_id2`) USING BTREE COMMENT '确保任意两个用户之间的会话是唯一的，意味着 (A, B) 和 (B, A) 会被认为是同一个会话。'
+) ENGINE = InnoDB AUTO_INCREMENT = 10000001 CHARACTER SET = utf8mb4 comment = '咨询会话表';
+
+drop table if exists `message`;
+CREATE TABLE `message`  (
+                            `id` bigint(20) UNSIGNED NOT NULL COMMENT '消息id',
+                            `from_id` bigint(20) UNSIGNED NOT NULL COMMENT '发送方id',
+                            `session_id` bigint(20) UNSIGNED NOT NULL COMMENT '会话id',
+                            `type` tinyint(1) UNSIGNED NOT NULL DEFAULT 1 COMMENT '消息类型',
+                            `content` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '消息正文',
+                            `visited` tinyint(2) NOT NULL COMMENT '消息是否浏览过  10未浏览 11未浏览',
+                            `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '消息状态 0未读 1已读',
+                            `create_time` bigint(20) NOT NULL COMMENT '消息发送时间（毫秒时间戳）',
+                            PRIMARY KEY (`id`) USING BTREE,
+                            INDEX `idx_from_id`(`from_id`) USING BTREE,
+                            INDEX `idx_session_id`(`session_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COMMENT = '消息表';
+
+DROP TABLE IF EXISTS `house`;
+CREATE TABLE `house`  (
+                          `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+                          `user_id` bigint(20) UNSIGNED NOT NULL COMMENT '房东id',
+                          `title` varchar(50) NOT NULL COMMENT '标题',
+                          `rent_type` varchar(20) NOT NULL COMMENT '租房类型',
+                          `floor` int(11) NOT NULL COMMENT '所在楼层',
+                          `all_floor` int(11) NOT NULL COMMENT '总楼层',
+                          `house_type` varchar(20) NOT NULL COMMENT '户型',
+                          `rooms` varchar(20) NOT NULL COMMENT '居室',
+                          `position` varchar(20) NOT NULL COMMENT '朝向',
+                          `area` decimal(10, 2) NOT NULL COMMENT '面积（平方米）',
+                          `price` decimal(10, 2) NOT NULL COMMENT '价格（元）',
+                          `intro` varchar(2047) NOT NULL COMMENT '房屋介绍',
+                          `devices` varchar(255) NOT NULL COMMENT '设备',
+                          `head_image` varchar(110) NOT NULL COMMENT '头图',
+                          `images` varchar(2047) NULL DEFAULT NULL COMMENT '房源图',
+                          `city_id` bigint(20) NOT NULL COMMENT '城市id',
+                          `city_name` varchar(40) NOT NULL COMMENT '城市名',
+                          `region_id` bigint(20) NOT NULL COMMENT '区域id',
+                          `region_name` varchar(40) NOT NULL COMMENT '区域名',
+                          `community_name` varchar(40) NOT NULL COMMENT '社区名',
+                          `detail_address` varchar(255) NOT NULL COMMENT '详细地址',
+                          `longitude` decimal(10, 7) NOT NULL COMMENT '经度',
+                          `latitude` decimal(10, 7) NOT NULL COMMENT '纬度',
+                          PRIMARY KEY (`id`) USING BTREE,
+                          INDEX `idx_user_id`(`user_id`) USING BTREE,
+                          INDEX `idx_rent_type`(`rent_type`) USING BTREE,
+                          INDEX `idx_title`(`title`) USING BTREE,
+                          INDEX `idx_community_name`(`community_name`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1000001 CHARACTER SET = utf8mb4 comment = '房源表';
+
+DROP TABLE IF EXISTS `house_status`;
+CREATE TABLE `house_status`  (
+                                 `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+                                 `house_id` bigint(20) NOT NULL COMMENT '房源id',
+                                 `status` varchar(10) NOT NULL COMMENT '房源状态',
+                                 `rent_time_code` varchar(20) NULL DEFAULT NULL COMMENT '出租时长（字典配置）',
+                                 `rent_start_time` bigint(20) NULL DEFAULT NULL COMMENT '开始出租时间（时间戳）',
+                                 `rent_end_time` bigint(20) NULL DEFAULT NULL COMMENT '结束出租时间（时间戳）',
+                                 PRIMARY KEY (`id`) USING BTREE,
+                                 UNIQUE INDEX `uk_house_id`(`house_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1000001 CHARACTER SET = utf8mb4 comment = '房源状态表';
+
+DROP TABLE IF EXISTS `tag`;
+CREATE TABLE `tag`  (
+                        `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+                        `tag_code` varchar(20) NOT NULL COMMENT '标签码',
+                        `tag_name` varchar(20) NOT NULL COMMENT '标签名',
+                        PRIMARY KEY (`id`) USING BTREE,
+                        UNIQUE INDEX `uk_tag_code`(`tag_code`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1000001 CHARACTER SET = utf8mb4 comment = '标签表';
+
+
+DROP TABLE IF EXISTS `tag_house`;
+CREATE TABLE `tag_house`  (
+                              `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+                              `tag_code` varchar(20) NOT NULL COMMENT '标签码',
+                              `house_id` bigint(20) NOT NULL COMMENT '房源id',
+                              PRIMARY KEY (`id`) USING BTREE,
+                              INDEX `idx_tag_code`(`tag_code`) USING BTREE,
+                              INDEX `idx_house_id`(`house_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1000001 CHARACTER SET = utf8mb4 comment = '标签房源关系表';
+
+DROP TABLE IF EXISTS `city_house`;
+CREATE TABLE `city_house`  (
+                               `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+                               `city_id` bigint(20) NOT NULL COMMENT '城市id',
+                               `city_name` varchar(40) NOT NULL COMMENT '城市名',
+                               `house_id` bigint(20) NOT NULL COMMENT '房源id',
+                               PRIMARY KEY (`id`) USING BTREE,
+                               INDEX `idx_city_id`(`city_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1000001 CHARACTER SET = utf8mb4 comment = '城市房源关系表';
+
+
+INSERT INTO sys_dictionary_type (type_key, value, remark, status)
+VALUES ('device_list', '设备列表', '房屋设备', 1),
+       ('position_list', '方向列表', '房屋朝向', 1),
+       ('rent_type_list', '租房类型列表', '', 1),
+       ('rent_range', '租金', '租金范围', 1),
+       ('rent_type', '租房类型', '房屋出租类型', 1),
+       ('room_num', '居室', '房源居室数量', 1),
+       ('rent_time', '租期', '房屋出租时长', 1);
+
+INSERT INTO sys_dictionary_data (type_key, data_key, value, remark, sort, status)
+VALUES ('device_list', 'soft', '沙发', '', 1, 1),
+       ('device_list', 'washer', '洗衣机', '', 2, 1),
+       ('device_list', 'heater', '热水器', '', 3, 1),
+       ('device_list', 'broadband', '宽带', '', 4, 1),
+       ('device_list', 'icebox', '冰箱', '', 5, 1),
+       ('device_list', 'hood', '油烟机', '', 6, 1),
+       ('device_list', 'gas', '燃气灶', '', 7, 1),
+       ('device_list', 'cook', '可做饭', '', 8, 1),
+       ('device_list', 'tv', '电视', '', 9, 1),
+       ('device_list', 'aircondition', '空调', '', 10, 1);
+INSERT INTO sys_dictionary_data (type_key, data_key, value, remark, sort, status)
+VALUES ('device_list', 'wardrobe', '衣柜', '', 11, 1),
+       ('device_list', 'bed', '床', '', 12, 1),
+       ('device_list', 'toilet', '卫生间', '', 13, 1),
+       ('device_list', 'smartlock', '智能门锁', '', 14, 1),
+       ('device_list', 'balcony', '阳台', '', 15, 1),
+       ('device_list', 'heating', '暖气', '', 16, 1),
+       ('position_list', 'east', '东', '', 1, 1),
+       ('position_list', 'south', '南', '', 2, 1),
+       ('position_list', 'west', '西', '', 3, 1),
+       ('position_list', 'north', '北', '', 4, 1);
+INSERT INTO sys_dictionary_data (type_key, data_key, value, remark, sort, status)
+VALUES ('rent_type_list', 'whole_rent', '整租', '', 1, 1),
+       ('rent_type_list', 'share_rent', '合租', '', 2, 1),
+       ('rent_type_list', 'worry_free_rental', '省心租', '', 3, 1),
+       ('rent_type_list', 'apartment', '公寓', '', 4, 1),
+       ('rent_type_list', 'personal_house', '个人房源', '', 4, 1),
+       ('rent_range', 'range_1', '<1000元', '', 1, 1),
+       ('rent_range', 'range_2', '1000-1500元', '', 2, 1),
+       ('rent_range', 'range_3', '1500-2000元', '', 3, 1),
+       ('rent_range', 'range_4', '2000-3000元', '', 4, 1),
+       ('rent_range', 'range_5', '3000-5000元', '', 5, 1);
+INSERT INTO sys_dictionary_data (type_key, data_key, value, remark, sort, status)
+VALUES ('rent_range', 'range_6', '>5000元', '', 6, 1),
+       ('rent_type', 'whole', '整租', '', 2, 1),
+       ('rent_type', 'shared', '合租', '', 3, 1),
+       ('rent_type', 'trouble_free', '省心租', '', 4, 1),
+       ('rent_type', 'apartment', '公寓', '', 5, 1),
+       ('rent_type', 'individual', '个人房源', '', 6, 1),
+       ('room_num', 'one', '1居', '', 2, 1),
+       ('room_num', 'two', '2居', '', 3, 1),
+       ('room_num', 'three', '3居', '', 4, 1),
+       ('room_num', 'four', '4居', '', 5, 1);
+INSERT INTO sys_dictionary_data (type_key, data_key, value, remark, sort, status)
+VALUES ('room_num', 'more', '4居以上', '', 6, 1),
+       ('rent_time', 'thirty_seconds', '30秒', '', 1, 1),
+       ('rent_time', 'half_year', '半年', '', 2, 1),
+       ('rent_time', 'one_year', '一年', '', 3, 1);
+INSERT INTO tag (tag_code, tag_name)
+VALUES ('near_subway', '近地铁'),
+       ('civil_water_elec', '民水民电'),
+       ('lift', '有电梯'),
+       ('central_heating', '集中供暖'),
+       ('renovation', '精装修'),
+       ('cook', '可做饭');

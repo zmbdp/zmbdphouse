@@ -126,6 +126,7 @@ services:
       - zmbdphouse_network
     ports:
       - "80:80"
+      - "81:81"
     volumes:
       - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/web/dist:/data/zmbdphouse/web/dist
