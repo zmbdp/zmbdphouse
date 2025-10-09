@@ -34,9 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @ServerEndpoint(
-        value = "/websocket",
-        configurator = WebSocketConfig.class,
-        encoders = {ServerEncoder.class}
+        value = "/websocket", // 设置访问路径 ws://ip:port/websocket
+        configurator = WebSocketConfig.class, // 获取 endpoint 实例的配置类，自定义 WebSocket 端点的配置
+        encoders = {ServerEncoder.class} // 消息编码器，将对象转换为客户端可识别的格式
 )
 public class WebSocketServer {
 
