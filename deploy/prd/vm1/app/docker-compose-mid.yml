@@ -115,8 +115,8 @@ services:
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
       - MYSQL_SERVICE_PASSWORD=Hf@173503494
-      - NACOS_SERVER_IP=云服务器内网ip
-      - NACOS_SERVERS=云服务器内网ip:8854 云服务器内网ip:8856 10.0.16.17:8858
+      - NACOS_SERVER_IP=云服务器1内网ip
+      - NACOS_SERVERS=云服务器1内网ip:8854 云服务器1内网ip:8856 云服务器2内网ip:8858
     volumes:
       - ../data/zmbdphousedata/nacos01/logs/:/home/nacos/logs
       - ../data/zmbdphousedata/nacos01/tomcatlogs/:/home/bit/nacos/tomcat/logs/
@@ -152,8 +152,8 @@ services:
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
       - MYSQL_SERVICE_PASSWORD=Hf@173503494
-      - NACOS_SERVER_IP=云服务器内网ip
-      - NACOS_SERVERS=云服务器内网ip:8854 云服务器内网ip:8856 10.0.16.17:8858
+      - NACOS_SERVER_IP=云服务器1内网ip
+      - NACOS_SERVERS=云服务器1内网ip:8854 云服务器1内网ip:8856 云服务器2内网ip:8858
     volumes:
       - ../data/zmbdphousedata/nacos02/logs/:/home/nacos/logs
       - ../data/zmbdphousedata/nacos02/tomcatlogs/:/home/bit/nacos/tomcat/logs/
@@ -180,7 +180,7 @@ services:
     restart: always
     hostname: zmbdphouse-rabbitmq01
     extra_hosts:
-      - "zmbdphouse-rabbitmq02:10.0.16.17"
+      - "zmbdphouse-rabbitmq02:云服务器2内网ip"
     environment:
       RABBITMQ_ERLANG_COOKIE: 'BITECOOKIE'
       RABBITMQ_NODE_PORT: 5673
