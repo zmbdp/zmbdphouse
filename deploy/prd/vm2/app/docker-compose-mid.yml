@@ -109,7 +109,7 @@ services:
       - JVM_XMN=256m
       - NACOS_APPLICATION_PORT=8858
       - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=云服务器内网ip
+      - MYSQL_SERVICE_HOST=云服务器1内网ip
       - MYSQL_SERVICE_PORT=3308
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
@@ -149,7 +149,7 @@ services:
     restart: always
     hostname: zmbdphouse-rabbitmq02
     extra_hosts:
-      - "zmbdphouse-rabbitmq01:云服务器内网ip"
+      - "zmbdphouse-rabbitmq01:云服务器1内网ip"
     environment:
       RABBITMQ_ERLANG_COOKIE: 'BITECOOKIE'
       RABBITMQ_NODE_PORT: 5673

@@ -110,7 +110,7 @@ services:
       - JVM_XMN=256m
       - NACOS_APPLICATION_PORT=8854
       - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=云服务器内网ip
+      - MYSQL_SERVICE_HOST=云服务器1内网ip
       - MYSQL_SERVICE_PORT=3308
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
@@ -147,7 +147,7 @@ services:
       - JVM_XMN=256m
       - NACOS_APPLICATION_PORT=8856
       - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=云服务器内网ip
+      - MYSQL_SERVICE_HOST=云服务器1内网ip
       - MYSQL_SERVICE_PORT=3308
       - MYSQL_SERVICE_DB_NAME=zmbdphouse_nacos_prd
       - MYSQL_SERVICE_USER=zmbdpdev
