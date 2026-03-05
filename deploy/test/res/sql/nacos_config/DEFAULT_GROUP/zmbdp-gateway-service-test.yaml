@@ -17,6 +17,11 @@ spring:
           uri: lb://zmbdp-file-service
           predicates:
             - Path=/file/**
+          metadata:
+            # 响应超时时间
+            response-timeout: 300000
+            # 连接超时时间
+            connect-timeout: 300000
         # 地图微服务
         - id: zmbdp-admin-service
           uri: lb://zmbdp-admin-service
@@ -31,11 +36,18 @@ spring:
             - Path=/portal/**
           filters:
             - StripPrefix=1
+        # 聊天咨询微服务
+        - id: zmbdp-chat-service
+          uri: lb://zmbdp-chat-service
+          predicates:
+            - Path=/chat/**
+          filters:
+            - StripPrefix=1
 
 
 security:
   ignore:
-  # 白名单配置
+    # 白名单配置
     whites:
       - /**/register/**
       - /admin/codeLogin
