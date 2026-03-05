@@ -97,6 +97,7 @@ public class HomePageServiceImpl implements IHomePageService {
         // 构造返回
         CityDescVO cityDescVO = new CityDescVO();
         BeanCopyUtil.copyProperties(regionCityVoResult.getData(), cityDescVO);
+        log.info("城市定位成功！req: {}, res: {}, 城市ID: {}", JsonUtil.classToJson(locationReqDTO), JsonUtil.classToJson(regionCityVoResult.getData()), regionCityVoResult.getData().getId());
         return cityDescVO;
     }
 
