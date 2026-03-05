@@ -14,6 +14,7 @@ import com.zmbdp.admin.service.map.service.IMapService;
 import com.zmbdp.common.cache.utils.CacheUtil;
 import com.zmbdp.common.core.domain.dto.BasePageDTO;
 import com.zmbdp.common.core.utils.BeanCopyUtil;
+import com.zmbdp.common.core.utils.JsonUtil;
 import com.zmbdp.common.core.utils.PageUtil;
 import com.zmbdp.common.redis.service.RedisService;
 import com.zmbdp.common.redis.service.RedissonLockService;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -393,30 +395,84 @@ public class MapServiceImpl implements IMapService {
      */
     @Override
     public RegionCityDTO getCityByLocation(LocationReqDTO locationReqDTO) {
-        // 构建腾讯地图经纬度请求参数
+
+        // 构建腾讯地图请求参数
         LocationDTO locationDTO = new LocationDTO();
         BeanCopyUtil.copyProperties(locationReqDTO, locationDTO);
-        // 调用腾讯地图接口
+
+        // 调用腾讯地图
         GeoResultDTO geoResultDTO = iMapProvider.getQQMapDistrictByLonLat(locationDTO);
-        RegionCityDTO result = new RegionCityDTO();
-        // 拿到这个城市所有的信息之后，进行对象转换
-        if (geoResultDTO != null && geoResultDTO.getResult() != null && geoResultDTO.getResult().getAd_info() != null) {
-            String cityName = geoResultDTO.getResult().getAd_info().getCity();
-            // 查缓存看看有没有这个城市
-            // 获取缓存中所有的城市列表
-            List<SysRegionDTO> cacheCityS = CacheUtil.getL2Cache(redisService, MapConstants.CACHE_MAP_CITY_KEY, new TypeReference<List<SysRegionDTO>>() {
-            }, caffeineCache);
-            // 获取成功直接查
-            if (cacheCityS != null) {
-                for (SysRegionDTO sysRegionDTO : cacheCityS) {
-                    // 然后比较
-                    if (sysRegionDTO.getFullName().equals(cityName)) {
-                        BeanCopyUtil.copyProperties(sysRegionDTO, result);
-                        return result;
-                    }
-                }
-            }
+
+        String cityName = geoResultDTO.getResult().getAd_info().getCity();
+
+        // 如果没有获取到城市名称，则返回默认城市
+        if (cityName == null) {
+            log.warn("经纬度获取城市名称失败，使用默认城市。lat: {}, lng: {}", locationReqDTO.getLat(), locationReqDTO.getLng());
+            return buildDefaultCity();
         }
+
+        // 获取城市缓存
+        List<SysRegionDTO> cityList = getCityListFromCache();
+
+        // 说明数据库中没有城市信息，则返回默认城市
+        if (CollectionUtils.isEmpty(cityList)) {
+            log.warn("数据库中没有城市信息，使用默认城市，geoResultDTO: {}", JsonUtil.classToJson(geoResultDTO));
+            return buildDefaultCity();
+        }
+
+        // 查找城市
+        return cityList.stream()
+                .filter(city -> cityName.equals(city.getFullName()))
+                .findFirst()
+                .map(city -> {
+                    RegionCityDTO result = new RegionCityDTO();
+                    BeanCopyUtil.copyProperties(city, result);
+                    return result;
+                })
+                .orElseGet(this::buildDefaultCity);
+    }
+
+    /**
+     * 获取城市列表缓存
+     *
+     * @return 城市列表缓存
+     */
+    private List<SysRegionDTO> getCityListFromCache() {
+
+        List<SysRegionDTO> cityList = CacheUtil.getL2Cache(
+                redisService,
+                MapConstants.CACHE_MAP_CITY_KEY,
+                new TypeReference<List<SysRegionDTO>>() {
+                },
+                caffeineCache
+        );
+
+        if (cityList == null) {
+            log.info("缓存中没有城市列表，从数据库加载");
+            initCityMap();
+
+            cityList = CacheUtil.getL2Cache(
+                    redisService,
+                    MapConstants.CACHE_MAP_CITY_KEY,
+                    new TypeReference<List<SysRegionDTO>>() {
+                    },
+                    caffeineCache
+            );
+        }
+
+        return cityList;
+    }
+
+    /**
+     * 构建默认城市
+     *
+     * @return 默认城市
+     */
+    private RegionCityDTO buildDefaultCity() {
+        RegionCityDTO result = new RegionCityDTO();
+        result.setId(1L);
+        result.setName("北京");
+        result.setFullName("北京市");
         return result;
     }
 }
