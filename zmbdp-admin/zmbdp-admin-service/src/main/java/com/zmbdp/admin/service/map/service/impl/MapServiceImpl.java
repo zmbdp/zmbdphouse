@@ -113,11 +113,9 @@ public class MapServiceImpl implements IMapService {
         List<SysRegionDTO> result = new ArrayList<>();
         // 对象转换
         for (SysRegion sysRegion : cityList) {
-            if (sysRegion.getLevel().equals(MapConstants.CITY_LEVEL)) {
-                SysRegionDTO sysRegionDTO = new SysRegionDTO();
-                BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
-                result.add(sysRegionDTO);
-            }
+            SysRegionDTO sysRegionDTO = new SysRegionDTO();
+            BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
+            result.add(sysRegionDTO);
         }
         // 设置缓存
         CacheUtil.setL2Cache(redisService, MapConstants.CACHE_MAP_CITY_KEY, result, caffeineCache, 120L, TimeUnit.MINUTES);
@@ -199,16 +197,7 @@ public class MapServiceImpl implements IMapService {
                 return resultDTO;
             }
             // 查数据库
-            List<SysRegion> tmoList = regionMapper.selectAllRegion();
-            List<SysRegion> list = new ArrayList<>();
-            for (SysRegion sysRegion : tmoList) {
-                if (sysRegion.getLevel().equals(MapConstants.CITY_LEVEL)) {
-                    list.add(sysRegion);
-                }
-            }
-            if (list.isEmpty()) {
-                return null;
-            }
+            List<SysRegion> list = regionMapper.selectAllRegion();
             // 拷贝成 dto 返回
             resultDTO = BeanCopyUtil.copyListProperties(list, SysRegionDTO::new);
             // 然后再存储到缓存中
@@ -298,26 +287,33 @@ public class MapServiceImpl implements IMapService {
     @Override
     public List<SysRegionDTO> getRegionChildren(Long parentId) {
         // 先从缓存中拿取数据，然后根据 parentId 来判断是否需要返回
-        // 1 入参可以参与构建缓存的 key
         String key = MapConstants.CACHE_MAP_CITY_CHILDREN_KEY + parentId;
-        // 2 查缓存
         List<SysRegionDTO> resultRegions = CacheUtil.getL2Cache(redisService, key, new TypeReference<List<SysRegionDTO>>() {
         }, caffeineCache);
         if (resultRegions != null) {
             return resultRegions;
         }
-        // 3 如果说没查询到，则从数据库中查询
+        // 如果说没查询到，就从数据库中查询
         List<SysRegion> list = regionMapper.selectAllRegion();
         List<SysRegionDTO> result = new ArrayList<>();
         for (SysRegion sysRegion : list) {
-            // 判断父节点不为空，并且父节点是符合的才返回
-            if (sysRegion.getParentId() != null && sysRegion.getParentId().equals(parentId)) {
-                SysRegionDTO sysRegionDTO = new SysRegionDTO();
-                BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
-                result.add(sysRegionDTO);
+            // 如果 parentId 为 null，返回顶级节点（parentId 为 null 的数据）
+            if (parentId == null) {
+                if (sysRegion.getParentId() == null) {
+                    SysRegionDTO sysRegionDTO = new SysRegionDTO();
+                    BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
+                    result.add(sysRegionDTO);
+                }
+            } else {
+                // 判断父节点不为空，并且父节点是符合的才返回
+                if (sysRegion.getParentId() != null && sysRegion.getParentId().equals(parentId)) {
+                    SysRegionDTO sysRegionDTO = new SysRegionDTO();
+                    BeanCopyUtil.copyProperties(sysRegion, sysRegionDTO);
+                    result.add(sysRegionDTO);
+                }
             }
         }
-        // 4 设置缓存
+        // 设置缓存
         CacheUtil.setL2Cache(redisService, key, result, caffeineCache, 120L, TimeUnit.MINUTES);
         return result;
     }
