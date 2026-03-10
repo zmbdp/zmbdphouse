@@ -14,8 +14,8 @@
   <a href="https://github.com/alibaba/spring-cloud-alibaba">
     <img src="https://img.shields.io/badge/Spring%20Cloud%20Alibaba-2023.0.1.2-blueviolet.svg" alt="Spring Cloud Alibaba">
   </a>
-  <a href="https://github.com/zmbdp/zmbdphouse/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/zmbdp/zmbdphouse" alt="License">
+  <a href="https://github.com/zmbdp/frameworkjava?tab=readme-ov-file#frameworkjava">
+    <img src="https://img.shields.io/badge/FrameWork-Java-e06700.svg" alt="FrameWork-Java">
   </a>
 </p>
 
@@ -23,7 +23,7 @@
 
 zmbdpHouse是一个基于Spring Boot和Spring Cloud的在线租房平台，为用户提供房源浏览、在线预约、租房管理等功能。
 
-本项目基于[zmbdp/frameworkjava](https://github.com/zmbdp/frameworkjava)自研企业级Spring Boot微服务脚手架开发，继承了其微服务架构和核心功能特性。
+本项目基于[frameworkjava](https://github.com/zmbdp/frameworkjava?tab=readme-ov-file#frameworkjava)自研企业级Spring Boot微服务脚手架开发，继承了其微服务架构和核心功能特性。
 
 ## 核心特性
 
