@@ -14,8 +14,8 @@
   <a href="https://github.com/alibaba/spring-cloud-alibaba">
     <img src="https://img.shields.io/badge/Spring%20Cloud%20Alibaba-2023.0.1.2-blueviolet.svg" alt="Spring Cloud Alibaba">
   </a>
-  <a href="https://github.com/zmbdp/zmbdphouse/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/zmbdp/zmbdphouse" alt="License">
+  <a href="https://github.com/zmbdp/frameworkjava?tab=readme-ov-file#frameworkjava">
+    <img src="https://img.shields.io/badge/FrameWork-Java-e06700.svg" alt="FrameWork-Java">
   </a>
 </p>
 
